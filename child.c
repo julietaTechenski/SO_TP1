@@ -8,8 +8,9 @@ int main(int argc, char* argv[]){
 
     unsigned int md5 = system(command);
 
-    /*write to shared memory:
-     *    file_name (argv[1])    md5    getpid()
+    /*write to through pipe to parent process:
+     *  file_name (argv[1] (?)) - md5 - ID child (getpid())
+     * (child processes do not write directly to shared memory)
      * */
 
     return 0;
