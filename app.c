@@ -26,17 +26,27 @@ int main(int argc, char* argv[]){
     }
 /*int shm_open(const char *name, int oflag, mode_t mode);*/
 
+    // pipes' variables
+    int pipefd[children_amount][2];
+    pid_t cpid[children_amount];
+
+    // pipes' validation
+    for(int i = 0; i < children_amount; i++)
+        if(pipe(pipefd[i]) == -1){
+            perror("Error generating pipe\n");
+            exit(EXIT_FAILURE);
+        }
 
     fd_set rfds;
     FD_ZERO(&rfds);
 
     for(int i = 0; i < children_amount; i++){
-        int pid = fork();
-        if(pid < 0){
+        cpid[i] = fork();
+        if(cpid[i] < 0){
             perror("Error creating child process\n");
             exit(EXIT_FAILURE);
         }
-        if(pid == 0){  // child process
+        if(cpid[i] == 0){  // child process
             char *newargv[] = {"child", argv[i]};
             char *newenviron[] = {NULL};
 
