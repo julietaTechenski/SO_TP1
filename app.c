@@ -32,9 +32,9 @@ int main(int argc, char* argv[]){
     }
 
     shmp = mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE,MAP_SHARED, shmfd, 0);
-    if (shmp == MAP_FAILED)
-        perror("mmap\n");
-        exit(EXIT_FAIlURE);
+//    if (shmp == MAP_FAILED)
+//        perror("mmap\n");
+//        exit(EXIT_FAILURE);
 
     // initializing semaphore in 0
     if (sem_init(&shmp->mutex, 1, 0) == -1) {
@@ -92,11 +92,15 @@ int main(int argc, char* argv[]){
 
     while(to_read > 0){
         int available = select(nfds, &rfds, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
-        while(available > 0) {
+        for(int i = 0; i < children_amount ; i++) {
             /*reads*/
+            /*writes to shared memory*/
             available--;
         }
         to_read--;
     }
+
+    shm_unlink(shmpath);
+
     return 0;
 }
