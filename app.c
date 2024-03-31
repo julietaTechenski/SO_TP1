@@ -6,10 +6,10 @@
 int main(int argc, char* argv[]){
     int children_amount = (argc-1)/10;
 
-    char *shmpath;
-//  struct shmbuf  *shmp;
+    char *shmpath = "shm.txt";
+    int shmfd;
 
-    if((shmpath = open("shm.txt", O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1){
+    if((shmfd = open(shmpath, O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1){
         perror("Error creating shared memory file\n");
         exit(EXIT_FAILURE);
     }
