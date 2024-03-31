@@ -6,24 +6,47 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <semaphore.h>
+
+struct shmbuf {
+    sem_t mutex;
+    size_t cnt;
+};
+
+// included in select.h
+//struct timespec{
+//    time_t tv_sec;
+//    long tv_nsec;
+//};
 
 int main(int argc, char* argv[]){
     int children_amount = (argc-1)/10;
 
     char *shmpath = "shm.txt";
     int shmfd;
+    struct shmbuf *shmp;
 
     if((shmfd = shm_open(shmpath, O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1){
-        perror("Error creating shared memory file\n");
+        perror("Error creating shared memory\n");
         exit(EXIT_FAILURE);
     }
 
-//    shmp = mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE,
-//                MAP_SHARED, fd, 0);
-//    if (shmp == MAP_FAILED)
-//        errExit("mmap");
+    shmp = mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE,MAP_SHARED, shmfd, 0);
+    if (shmp == MAP_FAILED)
+        perror("mmap\n");
+        exit(EXIT_FAIlURE);
 
-/*int shm_open(const char *name, int oflag, mode_t mode);*/
+    // initializing semaphore in 0
+    if (sem_init(&shmp->mutex, 1, 0) == -1) {
+        perror("Error initializing semaphre\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // waiting for the view process
+    if(sem_timedwait(&shmp->mutex, ) == -1){
+        perror("Error while waiting for the view process to start\n");
+        exit(EXIT_FAILURE);
+    }
 
     // pipes' variables
     int pipefd[children_amount][2];
