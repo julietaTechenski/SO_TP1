@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-// struct: file name - md5 - ID child
-
 #define SIZE 32
 
 int main(int argc, char* argv[]){
@@ -14,11 +12,6 @@ int main(int argc, char* argv[]){
     snprintf(command, sizeof(command), "md5sum %s", argv[1]);
 
     system(command);
-
-    /*write to through pipe to parent process:
-     *  file_name (argv[1] (?)) - md5 - ID child (getpid())
-     * (child processes do not write directly to shared memory)
-     * */
 
     return 0;
 }
