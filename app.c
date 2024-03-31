@@ -93,9 +93,11 @@ int main(int argc, char* argv[]){
     while(to_read > 0){
         int available = select(nfds, &rfds, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
         for(int i = 0; i < children_amount ; i++) {
-            /*reads*/
-            /*writes to shared memory*/
-            available--;
+            if(FD_ISSET(cpid[i][0],&rfds) == 1) {
+                /*reads*/
+                /*writes to shared memory*/
+                available--;
+            }
         }
         to_read--;
     }
