@@ -39,21 +39,37 @@ int main(int argc, char* argv[]){
 
     fd_set rfds;
     FD_ZERO(&rfds);
+    int nfds = 0;  //highest numbered file descriptor
+
+
+    int to_read = argc - 1; // files to be read counter
 
     for(int i = 0; i < children_amount; i++){
+
         cpid[i] = fork();
         if(cpid[i] < 0){
             perror("Error creating child process\n");
             exit(EXIT_FAILURE);
         }
         if(cpid[i] == 0){  // child process
-            char *newargv[] = {"child", argv[i]};
+            char *newargv[] = {"child", argv[i], NULL};  // passing first files as argument
             char *newenviron[] = {NULL};
 
             execve(newargv[0], newargv,newenviron);
+            exit(EXIT_SUCESS);
         }
+        if(nfds < cpid[i] || i == 0)
+            nfds = cpid[i];
     }
 
+    nfds++; // select argument convention
 
+    while(to_read > 0){
+        select(nfds, pipefd, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
+        if(/*FD_ISSET()*/){
+            /*reas*/
+        }
+        to_read--;
+    }
     return 0;
 }
