@@ -9,7 +9,7 @@ int main(int argc, char* argv[]){
     char *shmpath = "shm.txt";
     int shmfd;
 
-    if((shmfd = open(shmpath, O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1){
+    if((shmfd = shm_open(shmpath, O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1){
         perror("Error creating shared memory file\n");
         exit(EXIT_FAILURE);
     }
@@ -19,11 +19,6 @@ int main(int argc, char* argv[]){
 //    if (shmp == MAP_FAILED)
 //        errExit("mmap");
 
-    int shm_fd = shm(shmpath);
-    if(shm_fd < 0){
-        perror("Error establishing shared memory access\n");
-        exit(EXIT_FAILURE);
-    }
 /*int shm_open(const char *name, int oflag, mode_t mode);*/
 
     // pipes' variables
