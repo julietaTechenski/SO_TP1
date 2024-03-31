@@ -2,6 +2,10 @@
 #include <unistd.h>
 #include <sys/mman.h>  // for shm
 #include <sys/select.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 int main(int argc, char* argv[]){
     int children_amount = (argc-1)/10;
@@ -55,7 +59,7 @@ int main(int argc, char* argv[]){
             char *newenviron[] = {NULL};
 
             execve(newargv[0], newargv,newenviron);
-            exit(EXIT_SUCESS);
+            exit(EXIT_SUCCESS);
         }
         if(nfds < cpid[i] || i == 0)
             nfds = cpid[i];
