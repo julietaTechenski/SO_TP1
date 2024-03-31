@@ -29,17 +29,21 @@ int main(int argc, char* argv[]){
     // pipes' variables
     int pipefd[children_amount][2];
     pid_t cpid[children_amount];
-
     // pipes' validation
-    for(int i = 0; i < children_amount; i++)
-        if(pipe(pipefd[i]) == -1){
-            perror("Error generating pipe\n");
-            exit(EXIT_FAILURE);
-        }
 
     fd_set rfds;
     FD_ZERO(&rfds);
     int nfds = 0;  //highest numbered file descriptor
+
+
+    for(int i = 0; i < children_amount; i++) {
+        if(pipe(pipefd[i]) == -1){
+            perror("Error generating pipe\n");
+            exit(EXIT_FAILURE);
+        }
+        FD_SET(pipefd[0][i], &rfds);  // adding fds to rfds select argument
+    }
+
 
 
     int to_read = argc - 1; // files to be read counter
@@ -65,9 +69,10 @@ int main(int argc, char* argv[]){
     nfds++; // select argument convention
 
     while(to_read > 0){
-        select(nfds, pipefd, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
-        if(/*FD_ISSET()*/){
-            /*reas*/
+        int available = select(nfds, &rfds, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
+        while(available > 0) {
+            /*reads*/
+            available--;
         }
         to_read--;
     }
