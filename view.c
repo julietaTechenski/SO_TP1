@@ -59,13 +59,16 @@ int main(int argc, char* argv[]){
 
     while(!shutdown_flag){
         if(sem_wait(&sem_read) == -1){
-            perror("Error waiting for semaphores in view\n");
+            perror("Error in semaphores in view\n");
             exit(EXIT_FAILURE);
         }
 
         printf("%s", &shmp->buf);
 
-        sem_post(&sem_write);
+        if(sem_post(&sem_read) == -1) {
+            perror("Error in semaphores in view\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     return 0;
