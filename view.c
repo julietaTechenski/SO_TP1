@@ -58,8 +58,7 @@ int main(int argc, char* argv[]){
 
 
     while(!shutdown_flag){
-        sem_wait(&sem_read);
-        if(sem_wait(&shmp->sem) == -1){
+        if(sem_wait(&sem_read) == -1){
             perror("Error waiting for semaphores in view\n");
             exit(EXIT_FAILURE);
         }
