@@ -22,7 +22,7 @@ void shm_unlink_handler(int sig) {
 struct shmbuf {
     sem_t  sem;            /* POSIX unnamed semaphore */
     size_t cnt;             /* Number of bytes used in 'buf' */
-    char   buf[BUF_SIZE];   /* Data being transferred */
+    char buf[BUF_SIZE];   /* Data being transferred */
 };
 
 /*
@@ -42,7 +42,7 @@ int main(int argc, char* argv[]){
     size_t len = strlen(string);
 
     // opening shm object
-    int fd = shm_open(shmpath, O_RDONLY, 0);
+    int fd = shm_open(shmpath, O_RDONLY, 0644);
     if(fd == -1){
        perror("View couldn't open the shm\n");
        exit(EXIT_FAILURE);
@@ -57,6 +57,12 @@ int main(int argc, char* argv[]){
 
 
     while(!shutdown_flag){
+        if(sem_wait(&shmp->sem) == -1){
+            perror("Error waiting for semaphores in view\n");
+            exit(EXIT_FAILURE);
+        }
+
+        printf("%s", &shmp->buf);
         /*printing from shared memory*/
     }
 
