@@ -7,6 +7,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <semaphore.h>
+#include <string.h>
+
+#define CHILD "./child"
 
 struct shmbuf {
     sem_t mutex;
@@ -20,7 +23,8 @@ struct shmbuf {
 //};
 
 int main(int argc, char* argv[]){
-    int children_amount = (argc-1)/10;
+    int to_read = argc-1;
+    int children_amount = (to_read)/10 + 1;
 
     char *shmpath = "shm.txt";
     int shmfd;
@@ -55,51 +59,76 @@ int main(int argc, char* argv[]){
 
     fd_set rfds;
     FD_ZERO(&rfds);
-    int nfds = 0;  //highest numbered file descriptor
 
+    int nfds = 1;  //highest numbered file descriptor
+    int index = 1;
 
-    for(int i = 0; i < children_amount; i++) {
+    for(int i = 0; i < children_amount; i++){
+
+        //creating pipe between app and child
         if(pipe(pipefd[i]) == -1){
             perror("Error generating pipe\n");
             exit(EXIT_FAILURE);
         }
-        FD_SET(pipefd[0][i], &rfds);  // adding fds to rfds select argument
-    }
+        FD_SET(pipefd[i][0], &rfds);  // adding fds to rfds select argument
+        write(pipefd[i][1], argv[index], strlen(argv[index])); //giving 1 file to convert
+        index++;
 
+        //-------------------------------------------------------------------
 
-
-    int to_read = argc - 1; // files to be read counter
-
-    for(int i = 0; i < children_amount; i++){
         cpid = fork();
+
         if(cpid == -1){
             perror("Error creating child process\n");
             exit(EXIT_FAILURE);
         }
+
         if(cpid == 0){  // child process
-            char *newargv[] = {"child", NULL};  // passing first files as argument
+            char *newargv[] = {CHILD, NULL};  // passing first files as argument
             char *newenviron[] = {NULL};
 
-            to_read--;
-            execve(newargv[0], newargv,newenviron);
-            exit(EXIT_SUCCESS);
+            dup2(pipefd[i][0], 0);
+            dup2(pipefd[i][1], 1);
+            for (int j = 0; j < i; ++j) {       //closing fd with other child except mine
+                close(pipefd[j][0]);
+                close(pipefd[j][1]);
+            }
+
+            execve(newargv[0], newargv, newenviron);
+            //execve returns on error
+            perror("Execve error\n");
+            exit(EXIT_FAILURE);
         }
-        if(nfds < cpid || i == 0)
+
+        if(nfds < cpid)
             nfds = cpid;
     }
 
     nfds++; // select argument convention
 
-    while(to_read > 0){
-        int available = select(nfds, &rfds, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
+    fd_set read_set_aux;
+    int retrieved = 0;
+    while(retrieved < to_read){
+        read_set_aux = rfds;
+        int available = select(nfds, &read_set_aux, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
+        if(available==-1){
+            perror("Select error\n");
+            exit(EXIT_FAILURE);
+        }
+
         for(int i = 0; i < children_amount && available != 0; i++) {
-            if(FD_ISSET(pipefd[i][0],&rfds) == 1) {
-                /*reads*/
-                /*writes to shared memory*/
+            if(FD_ISSET(pipefd[i][0], &read_set_aux) != 0) {
+
+                //TODO read and copy to the shm
+                retrieved++;
+
+                if(index<argc) {
+                    write(pipefd[i][1], argv[index], strlen(argv[index]));
+                    index++;
+                }
                 available--;
             }
         }
-        to_read--;
     }
 
     shm_unlink(shmpath);
