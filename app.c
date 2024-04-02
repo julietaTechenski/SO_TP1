@@ -50,7 +50,7 @@ int main(int argc, char* argv[]){
 
     // pipes' variables
     int pipefd[children_amount][2];
-    pid_t cpid[children_amount];
+    pid_t cpid;
     // pipes' validation
 
     fd_set rfds;
@@ -71,12 +71,12 @@ int main(int argc, char* argv[]){
     int to_read = argc - 1; // files to be read counter
 
     for(int i = 0; i < children_amount; i++){
-        cpid[i] = fork();
-        if(cpid[i] < 0){
+        cpid = fork();
+        if(cpid == -1){
             perror("Error creating child process\n");
             exit(EXIT_FAILURE);
         }
-        if(cpid[i] == 0){  // child process
+        if(cpid == 0){  // child process
             char *newargv[] = {"child", NULL};  // passing first files as argument
             char *newenviron[] = {NULL};
 
@@ -84,8 +84,8 @@ int main(int argc, char* argv[]){
             execve(newargv[0], newargv,newenviron);
             exit(EXIT_SUCCESS);
         }
-        if(nfds < cpid[i] || i == 0)
-            nfds = cpid[i];
+        if(nfds < cpid || i == 0)
+            nfds = cpid;
     }
 
     nfds++; // select argument convention
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]){
     while(to_read > 0){
         int available = select(nfds, &rfds, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
         for(int i = 0; i < children_amount && available != 0; i++) {
-            if(FD_ISSET(cpid[i][0],&rfds) == 1) {
+            if(FD_ISSET(pipefd[i][0],&rfds) == 1) {
                 /*reads*/
                 /*writes to shared memory*/
                 available--;
