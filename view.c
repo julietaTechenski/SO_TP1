@@ -20,7 +20,8 @@ void shm_unlink_handler(int sig) {
 }
 
 struct shmbuf {
-    sem_t  sem;            /* POSIX unnamed semaphore */
+    sem_t  sem_read;            /* POSIX unnamed semaphore */
+    sem_t sem_write;
     size_t cnt;             /* Number of bytes used in 'buf' */
     char buf[BUF_SIZE];   /* Data being transferred */
 };
@@ -57,13 +58,15 @@ int main(int argc, char* argv[]){
 
 
     while(!shutdown_flag){
+        sem_wait(&sem_read);
         if(sem_wait(&shmp->sem) == -1){
             perror("Error waiting for semaphores in view\n");
             exit(EXIT_FAILURE);
         }
 
         printf("%s", &shmp->buf);
-        /*printing from shared memory*/
+
+        sem_post(&sem_write);
     }
 
     return 0;
