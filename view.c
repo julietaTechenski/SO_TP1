@@ -20,10 +20,10 @@ void shm_unlink_handler(int sig) {
 }
 
 struct shmbuf {
-    sem_t  sem_read;            /* POSIX unnamed semaphore */
+    sem_t sem_read;
     sem_t sem_write;
-    size_t cnt;             /* Number of bytes used in 'buf' */
-    char buf[BUF_SIZE];   /* Data being transferred */
+    size_t cnt;
+    char buf[BUF_SIZE];
 };
 
 /*
@@ -39,8 +39,6 @@ int main(int argc, char* argv[]){
     }
 
     char *shmpath = argv[1];
-    char *string = argv[2];
-    size_t len = strlen(string);
 
     // opening shm object
     int fd = shm_open(shmpath, O_RDONLY, 0644);
@@ -58,14 +56,14 @@ int main(int argc, char* argv[]){
 
 
     while(!shutdown_flag){
-        if(sem_wait(&sem_read) == -1){
+        if(sem_wait(&shmp->sem_read) == -1){
             perror("Error in semaphores in view\n");
             exit(EXIT_FAILURE);
         }
 
-        printf("%s", &shmp->buf);
+        printf("%s", shmp->buf);
 
-        if(sem_post(&sem_read) == -1) {
+        if(sem_post(&shmp->sem_write) == -1) {
             perror("Error in semaphores in view\n");
             exit(EXIT_FAILURE);
         }
