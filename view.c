@@ -5,6 +5,9 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#include <semaphore.h>
+
+#define BUF_SIZE 1024
 
 void shm_unlink_handler(int sig);
 
@@ -15,6 +18,12 @@ void shm_unlink_handler(int sig) {
         shutdown_flag = 1;
     }
 }
+
+struct shmbuf {
+    sem_t  sem;            /* POSIX unnamed semaphore */
+    size_t cnt;             /* Number of bytes used in 'buf' */
+    char   buf[BUF_SIZE];   /* Data being transferred */
+};
 
 /*
  * stdin as parameter: pathname of a shared memory object and the string that is to be copied
