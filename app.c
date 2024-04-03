@@ -62,7 +62,7 @@ int main(int argc, char* argv[]){
 
     // pipes' variables
     int pipefd[children_amount][2];
-    pid_t cpid[children_amount];
+    pid_t cpid;
     // pipes' validation
 
     fd_set rfds;
@@ -83,12 +83,12 @@ int main(int argc, char* argv[]){
 
         //-------------------------------------------------------------------
 
-        cpid[i] = fork();
+        cpid = fork();
 
-        if(cpid[i] == -1)
+        if(cpid == -1)
             errExit("Error creating child process\n");
 
-        if(cpid[i] == 0){  // child process
+        if(cpid == 0){  // child process
             char *newargv[] = {CHILD, NULL};  // passing first files as argument
             char *newenviron[] = {NULL};
 
@@ -104,8 +104,8 @@ int main(int argc, char* argv[]){
             errExit("Execve error\n");
         }
 
-        if(nfds < cpid[i])
-            nfds = cpid[i];
+        if(nfds < cpid)
+            nfds = cpid;
     }
 
     nfds++; // select argument convention
