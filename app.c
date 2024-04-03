@@ -18,7 +18,8 @@
 #define errExit(msg)    {perror(msg); exit(EXIT_FAILURE);}
 
 struct shmbuf {
-    sem_t  sem;            /* POSIX unnamed semaphore */
+    sem_t  sem_read;            /* POSIX unnamed semaphore */
+    sem_t  sem_write;            /* POSIX unnamed semaphore */
     size_t cnt;             /* Number of bytes used in 'buf' */
     char buf[BUF_SIZE];   /* Data being transferred */
 };
@@ -37,14 +38,18 @@ int main(int argc, char* argv[]){
     if(ftruncate(shm_fd, sizeof(struct shmbuf)) == -1)
         errExit("Truncate error\n");
 
-    printf(NAME_SHM);
     shmp = mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE,MAP_SHARED, shm_fd, 0);
     if (shmp == MAP_FAILED)
         errExit("Mmap error\n");
 
     // initializing semaphore in 0
-    if (sem_init(&shmp->sem, 1, 0) == -1)
-        errExit("Error initializing semaphre\n");
+    if (sem_init(&shmp->sem_read, 1, 0) == -1)
+        errExit("Error initializing semaphore 1\n");
+
+    if (sem_init(&shmp->sem_write, 1, 0) == -1)
+        errExit("Error initializing semaphore 2\n");
+
+
 
     // waiting for the view process
     struct timespec ts;
@@ -52,12 +57,12 @@ int main(int argc, char* argv[]){
         errExit("Clock error\n");
     ts.tv_sec += 2;
 
-    if(!(sem_timedwait(&(shmp->sem), &ts) == -1 && errno == ETIMEDOUT))
+    if(!(sem_timedwait(&(shmp->sem_write), &ts) == -1 && errno == ETIMEDOUT))
         flag=1;
 
     // pipes' variables
     int pipefd[children_amount][2];
-    pid_t cpid;
+    pid_t cpid[children_amount];
     // pipes' validation
 
     fd_set rfds;
@@ -69,24 +74,21 @@ int main(int argc, char* argv[]){
     for(int i = 0; i < children_amount; i++){
 
         //creating pipe between app and child
-        if(pipe(pipefd[i]) == -1){
-            perror("Error generating pipe\n");
-            exit(EXIT_FAILURE);
-        }
-        FD_SET(pipefd[i][0], &rfds);  // adding fds to rfds select argument
+        if(pipe(pipefd[i]) == -1)
+            errExit("Error generating pipe\n");
+
         write(pipefd[i][1], argv[index], strlen(argv[index])); //giving 1 file to convert
         index++;
+        FD_SET(pipefd[i][0], &rfds);  // adding fds to rfds select argument
 
         //-------------------------------------------------------------------
 
-        cpid = fork();
+        cpid[i] = fork();
 
-        if(cpid == -1){
-            perror("Error creating child process\n");
-            exit(EXIT_FAILURE);
-        }
+        if(cpid[i] == -1)
+            errExit("Error creating child process\n");
 
-        if(cpid == 0){  // child process
+        if(cpid[i] == 0){  // child process
             char *newargv[] = {CHILD, NULL};  // passing first files as argument
             char *newenviron[] = {NULL};
 
@@ -99,12 +101,11 @@ int main(int argc, char* argv[]){
 
             execve(newargv[0], newargv, newenviron);
             //execve returns on error
-            perror("Execve error\n");
-            exit(EXIT_FAILURE);
+            errExit("Execve error\n");
         }
 
-        if(nfds < cpid)
-            nfds = cpid;
+        if(nfds < cpid[i])
+            nfds = cpid[i];
     }
 
     nfds++; // select argument convention
@@ -114,10 +115,8 @@ int main(int argc, char* argv[]){
     while(retrieved < to_read){
         read_set_aux = rfds;
         int available = select(nfds, &read_set_aux, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
-        if(available==-1){
-            perror("Select error\n");
-            exit(EXIT_FAILURE);
-        }
+        if(available==-1)
+            errExit("Select error\n");
 
         int aux=0;
         char aux_buff[128];
@@ -128,8 +127,12 @@ int main(int argc, char* argv[]){
                     write(pipefd[i][1], argv[index], strlen(argv[index]));
                     index++;
                 }
+
+                if(sem_wait(&(shmp->sem_write)) == -1)
+                    errExit("Error while waiting to write\n");
+
                 if(flag){
-                    //post to shared mem and post
+
                 }
                 retrieved++;
                 available--;
