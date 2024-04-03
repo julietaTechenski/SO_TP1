@@ -2,55 +2,58 @@
 #include <unistd.h>
 #include <sys/mman.h>  // for shm
 #include <sys/select.h>
-#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <semaphore.h>
 #include <string.h>
+#include <stdlib.h>
+#include <time.h>
+#include <errno.h>
 
 #define CHILD "./child"
+#define BUF_SIZE 1024
+#define NAME_SHM "/shm.txt"
+
+#define errExit(msg)    {perror(msg); exit(EXIT_FAILURE);}
 
 struct shmbuf {
-    sem_t mutex;
-    size_t cnt;
+    sem_t  sem;            /* POSIX unnamed semaphore */
+    size_t cnt;             /* Number of bytes used in 'buf' */
+    char buf[BUF_SIZE];   /* Data being transferred */
 };
-
-// included in select.h
-//struct timespec{
-//    time_t tv_sec;
-//    long tv_nsec;
-//};
 
 int main(int argc, char* argv[]){
     int to_read = argc-1;
     int children_amount = (to_read)/10 + 1;
 
-    char *shmpath = "shm.txt";
-    int shmfd;
-    struct shmbuf *shmp;
+    int flag=0;
+    int shm_fd;
+    struct shmbuf * shmp;
 
-    if((shmfd = shm_open(shmpath, O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1){
-        perror("Error creating shared memory\n");
-        exit(EXIT_FAILURE);
-    }
+    if((shm_fd = shm_open(NAME_SHM, O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1)
+        errExit("Error creating shared memory\n");
 
-    shmp = mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE,MAP_SHARED, shmfd, 0);
-//    if (shmp == MAP_FAILED)
-//        perror("mmap\n");
-//        exit(EXIT_FAILURE);
+    if(ftruncate(shm_fd, sizeof(struct shmbuf)) == -1)
+        errExit("Truncate error\n");
+
+    printf(NAME_SHM);
+    shmp = mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE,MAP_SHARED, shm_fd, 0);
+    if (shmp == MAP_FAILED)
+        errExit("Mmap error\n");
 
     // initializing semaphore in 0
-    if (sem_init(&shmp->mutex, 1, 0) == -1) {
-        perror("Error initializing semaphre\n");
-        exit(EXIT_FAILURE);
-    }
+    if (sem_init(&shmp->sem, 1, 0) == -1)
+        errExit("Error initializing semaphre\n");
 
     // waiting for the view process
-    if(sem_timedwait(&shmp->mutex, ) == -1){
-        perror("Error while waiting for the view process to start\n");
-        exit(EXIT_FAILURE);
-    }
+    struct timespec ts;
+    if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
+        errExit("Clock error\n");
+    ts.tv_sec += 2;
+
+    if(!(sem_timedwait(&(shmp->sem), &ts) == -1 && errno == ETIMEDOUT))
+        flag=1;
 
     // pipes' variables
     int pipefd[children_amount][2];
@@ -87,8 +90,8 @@ int main(int argc, char* argv[]){
             char *newargv[] = {CHILD, NULL};  // passing first files as argument
             char *newenviron[] = {NULL};
 
-            dup2(pipefd[i][0], 0);
-            dup2(pipefd[i][1], 1);
+            dup2(pipefd[i][0], STDOUT_FILENO);
+            dup2(pipefd[i][1], STDIN_FILENO);
             for (int j = 0; j < i; ++j) {       //closing fd with other child except mine
                 close(pipefd[j][0]);
                 close(pipefd[j][1]);
@@ -116,22 +119,26 @@ int main(int argc, char* argv[]){
             exit(EXIT_FAILURE);
         }
 
+        int aux=0;
+        char aux_buff[128];
         for(int i = 0; i < children_amount && available != 0; i++) {
             if(FD_ISSET(pipefd[i][0], &read_set_aux) != 0) {
-
-                //TODO read and copy to the shm
-                retrieved++;
-
+                aux = read(pipefd[i][0], aux_buff, 128);
                 if(index<argc) {
                     write(pipefd[i][1], argv[index], strlen(argv[index]));
                     index++;
                 }
+                if(flag){
+                    //post to shared mem and post
+                }
+                retrieved++;
                 available--;
             }
         }
     }
 
-    shm_unlink(shmpath);
+    shm_unlink(NAME_SHM);
 
     return 0;
 }
+
