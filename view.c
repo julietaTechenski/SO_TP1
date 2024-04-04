@@ -68,12 +68,12 @@ int main(int argc, char* argv[]){
 
         int i;
         for(i = shmp->index; shmp->buf[i] != '\0'; i++)
-            printf("%s", shmp->buf[i]);
+            printf("%c", shmp->buf[i]);
 
         printf("\n");
         shmp->index+=i;
 
-        if(sem_post(&shmp->sem_post) == -1){
+        if(sem_post(&shmp->sem_read) == -1){
             errExit("Error in semaphores in view\n");
         }
 
