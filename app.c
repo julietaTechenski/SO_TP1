@@ -13,6 +13,7 @@
 
 #define CHILD "./child"
 #define BUF_SIZE 1024
+#define READ_BUF_AUX_SIZE 64
 #define NAME_SHM "/app_shm"
 
 #define errExit(msg)    {perror(msg); exit(EXIT_FAILURE);}
@@ -114,10 +115,10 @@ int main(int argc, char* argv[]){
 
         //Check what's available to read
         int aux=0;
-        char aux_buff[128];
+        char aux_buff[READ_BUF_AUX_SIZE];
         for(int i = 0; i < children_amount && available != 0; i++) {
             if(FD_ISSET(pipefd[i][0], &read_set_aux) != 0) {
-                aux = read(pipefd[i][0], aux_buff, 128);
+                aux = read(pipefd[i][0], aux_buff, READ_BUF_AUX_SIZE);
                 if(shmp->cnt+aux > BUF_SIZE)
                     errExit("No space left on buffer\n");
 
