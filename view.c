@@ -39,15 +39,14 @@ int main(int argc, char* argv[]){
 
     char shmpath[128];
 
-    if(argc > 1){
-        strncpy(shmpath, argv[1], 128);
-    }
-    else if(argc == 1){
+    if(!isatty(fileno(stdin))){
+        if(scanf("%127s", shmpath) != 1){
+            errExit("View could not read the file name through a pipe\n");
+        }
+    }else{
         if(read(STDOUT_FILENO, shmpath, 128) == -1){
             errExit("View could not read the file name from STDOUT\n");
         }
-    }else{
-        errExit("Incorrect amunt of parameters passed to view\n");
     }
 
     // opening shm object
