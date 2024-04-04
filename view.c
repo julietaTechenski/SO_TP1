@@ -51,7 +51,7 @@ int main(int argc, char* argv[]){
     }
 
     // opening shm object
-    int fd = shm_open(shmpath, O_CREAT | O_RDWR, 0644);
+    int fd = shm_open(shmpath, O_RDWR, 0644);
     if(fd == -1){
         errExit("View couldn't open the shm\n");
     }
