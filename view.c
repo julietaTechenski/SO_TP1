@@ -9,6 +9,9 @@
 
 #define BUF_SIZE 1024
 
+#define errExit(msg)    {perror(msg); exit(EXIT_FAILURE);}
+
+
 void shm_unlink_handler(int sig);
 
 volatile sig_atomic_t shutdown_flag = 0;
@@ -35,8 +38,7 @@ int main(int argc, char* argv[]){
     signal(SIGINT, shm_unlink_handler);
 
     if(argc != 3){
-        perror("Incorrect parameters passed to view\n");
-        exit(EXIT_FAILURE);
+        errExit("Incorrect parameters passed to view\n");
     }
 
     char *shmpath = argv[1];
@@ -44,28 +46,24 @@ int main(int argc, char* argv[]){
     // opening shm object
     int fd = shm_open(shmpath, O_RDONLY, 0644);
     if(fd == -1){
-       perror("View couldn't open the shm\n");
-       exit(EXIT_FAILURE);
+        errExit("View couldn't open the shm\n");
     }
 
     //mapping shm into the caller's address space
     struct shmbuf *shmp = mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if(shmp == MAP_FAILED){
-        perror("shm couldn't be mapped\n");
-        exit(EXIT_FAILURE);
+        errExit("shm couldn't be mapped\n");
     }
 
     shmp->index = 0; // initializing index to zero
 
     while(!shutdown_flag){
         if(sem_wait(&shmp->sem_read) == -1){   // waits to be sth to read
-            perror("Error in semaphores in view\n");
-            exit(EXIT_FAILURE);
+            errExit("Error in semaphores in view\n");
         }
 
         if(sem_wait(&shmp->sem_mutex) == -1){   // waits to have access to the shm
-            perror("Error in semaphores in view\n");
-            exit(EXIT_FAILURE);
+            errExit("Error in semaphores in view\n");
         }
 
         int i;
@@ -76,13 +74,11 @@ int main(int argc, char* argv[]){
         shmp->index+=i;
 
         if(sem_post(&shmp->sem_post) == -1){
-            perror("Error in semaphores in view\n");
-            exit(EXIT_FAILURE);
+            errExit("Error in semaphores in view\n");
         }
 
         if(sem_post(&shmp->sem_mutex) == -1){   // waits to have access to the shm
-            perror("Error in semaphores in view\n");
-            exit(EXIT_FAILURE);
+            errExit("Error in semaphores in view\n");
         }
 
     }
