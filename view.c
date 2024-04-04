@@ -26,6 +26,18 @@ int main(int argc, char* argv[]){
     // creating signal handler for when shm is unlinked
     signal(SIGINT, shm_unlink_handler);
 
+    char shmpath[128];
+
+    if(!isatty(fileno(stdin))){
+        if(scanf("%127s", shmpath) != 1){
+            errExit("View could not read the file name through a pipe\n");
+        }
+    }else{
+        if(read(STDOUT_FILENO, shmpath, 128) == -1){
+            errExit("View could not read the file name from STDOUT\n");
+        }
+    }
+
     // opening shm object
 
     int fd;
@@ -59,6 +71,7 @@ int main(int argc, char* argv[]){
             errExit("Error in semaphores in view\n");
     }
 
+    close(fd);
     shm_unlink(NAME_SHM);
     return 0;
 }
