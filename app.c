@@ -13,13 +13,14 @@
 
 #define CHILD "./child"
 #define BUF_SIZE 1024
-#define NAME_SHM "/shm.txt"
+#define NAME_SHM "/app_shm"
 
 #define errExit(msg)    {perror(msg); exit(EXIT_FAILURE);}
 
 struct shmbuf {
+    sem_t  sem_mutex;            /* POSIX unnamed semaphore */
     sem_t  sem_read;            /* POSIX unnamed semaphore */
-    sem_t  sem_write;            /* POSIX unnamed semaphore */
+    size_t index;             /* Index of reading */
     size_t cnt;             /* Number of bytes used in 'buf' */
     char buf[BUF_SIZE];   /* Data being transferred */
 };
@@ -28,7 +29,6 @@ int main(int argc, char* argv[]){
     int to_read = argc-1;
     int children_amount = (to_read)/10 + 1;
 
-    int flag=0;
     int shm_fd;
     struct shmbuf * shmp;
 
@@ -44,32 +44,24 @@ int main(int argc, char* argv[]){
 
     // initializing semaphore in 0
     if (sem_init(&shmp->sem_read, 1, 0) == -1)
-        errExit("Error initializing semaphore 1\n");
+        errExit("Error initializing semaphore read\n");
 
-    if (sem_init(&shmp->sem_write, 1, 0) == -1)
-        errExit("Error initializing semaphore 2\n");
+    if (sem_init(&shmp->sem_mutex, 1, 1) == -1)
+        errExit("Error initializing semaphore mutex\n");
 
-
-
-    // waiting for the view process
-    struct timespec ts;
-    if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
-        errExit("Clock error\n");
-    ts.tv_sec += 2;
-
-    if(!(sem_timedwait(&(shmp->sem_write), &ts) == -1 && errno == ETIMEDOUT))
-        flag=1;
+    sleep(5);
 
     // pipes' variables
     int pipefd[children_amount][2];
     pid_t cpid;
+
     // pipes' validation
 
     fd_set rfds;
     FD_ZERO(&rfds);
 
     int nfds = 1;  //highest numbered file descriptor
-    int index = 1;
+    int index = 1; //index of file to be sent to child
 
     for(int i = 0; i < children_amount; i++){
 
@@ -112,28 +104,46 @@ int main(int argc, char* argv[]){
 
     fd_set read_set_aux;
     int retrieved = 0;
+
     while(retrieved < to_read){
+        //Create aux set to execute select
         read_set_aux = rfds;
         int available = select(nfds, &read_set_aux, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
-        if(available==-1)
+        if(available == -1)
             errExit("Select error\n");
 
+        //Check what's available to read
         int aux=0;
         char aux_buff[128];
         for(int i = 0; i < children_amount && available != 0; i++) {
             if(FD_ISSET(pipefd[i][0], &read_set_aux) != 0) {
                 aux = read(pipefd[i][0], aux_buff, 128);
+                if(shmp->cnt+aux > BUF_SIZE)
+                    errExit("No space left on buffer\n");
+
+                // Give an additional file to process
+                // If there's not left files, close the pipes
                 if(index<argc) {
                     write(pipefd[i][1], argv[index], strlen(argv[index]));
                     index++;
+                }else{
+                    close(pipefd[i][0]);
+                    close(pipefd[i][1]);
                 }
 
-                if(sem_wait(&(shmp->sem_write)) == -1)
+                if(sem_wait(&(shmp->sem_mutex)) == -1)
                     errExit("Error while waiting to write\n");
 
-                if(flag){
+                //---------------WRITE ON SHM--------------------------
+                for(int j = 0; j < aux; ++j)
+                    shmp->buf[shmp->cnt + j] = aux_buff[j];
+                shmp->cnt += aux;
+                shmp->buf[shmp->cnt++]= 0;
+                //-----------------------------------------------------
 
-                }
+                if(sem_post(&(shmp->sem_mutex)) == -1)
+                    errExit("Error while posting sem\n");
+
                 retrieved++;
                 available--;
             }
@@ -141,7 +151,6 @@ int main(int argc, char* argv[]){
     }
 
     shm_unlink(NAME_SHM);
-
     return 0;
 }
 
