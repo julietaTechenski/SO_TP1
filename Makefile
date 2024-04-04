@@ -3,7 +3,7 @@ FLAGS=-Wall
 
 all: app child view
 
-# run: ./app files/* | ./view.c
+# run: ./app files/* | ./view
 
 app: ./app.c
 	$(COMPILER) $^ $(FLAGS) -o $@
