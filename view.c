@@ -43,7 +43,7 @@ int main(int argc, char* argv[]){
         strncpy(shmpath, argv[1], 128);
     }
     else if(argc == 1){
-        if(read(1, shmpath, 128) == -1){
+        if(read(STDOUT_FILENO, shmpath, 128) == -1){
             errExit("View could not read the file name from STDOUT\n");
         }
     }else{
@@ -51,7 +51,7 @@ int main(int argc, char* argv[]){
     }
 
     // opening shm object
-    int fd = shm_open(shmpath, O_RDONLY, 0644);
+    int fd = shm_open(shmpath, O_RDWR, 0644);
     if(fd == -1){
         errExit("View couldn't open the shm\n");
     }
