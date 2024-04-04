@@ -148,6 +148,9 @@ int main(int argc, char* argv[]){
                 if(sem_post(&(shmp->sem_mutex)) == -1)
                     errExit("Error while posting sem\n");
 
+                if(sem_post(&(shmp->sem_read)) == -1)
+                    errExit("Error while posting sem\n");
+
                 retrieved++;
                 available--;
             }
