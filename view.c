@@ -20,10 +20,11 @@ void shm_unlink_handler(int sig) {
 }
 
 struct shmbuf {
-    sem_t sem_read;
-    sem_t sem_write;
-    size_t cnt;
-    char buf[BUF_SIZE];
+    sem_t  sem_mutex;            /* POSIX unnamed semaphore */
+    sem_t  sem_read;            /* POSIX unnamed semaphore */
+    size_t index;             /* Index of reading */
+    size_t cnt;             /* Number of bytes used in 'buf' */
+    char buf[BUF_SIZE];   /* Data being transferred */
 };
 
 /*
