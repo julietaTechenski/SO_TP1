@@ -37,11 +37,18 @@ int main(int argc, char* argv[]){
     // creating signal handler for when shm is unlinked
     signal(SIGINT, shm_unlink_handler);
 
-    if(argc != 3){
-        errExit("Incorrect parameters passed to view\n");
-    }
+    char shmpath[128];
 
-    char *shmpath = argv[1];
+    if(argc > 1){
+        strncpy(shmpath, argv[1], 128);
+    }
+    else if(argc == 1){
+        if(read(1, shmpath, 128) == -1){
+            errExit("View could not read the file name from STDOUT\n");
+        }
+    }else{
+        errExit("Incorrect amunt of parameters passed to view\n");
+    }
 
     // opening shm object
     int fd = shm_open(shmpath, O_RDONLY, 0644);
