@@ -27,6 +27,9 @@ struct shmbuf {
 };
 
 int main(int argc, char* argv[]){
+    if(argc == 1)
+        errExit("Give at least one file to convert\n");
+
     int to_read = argc-1;
     int children_amount = (to_read)/10 + 1;
 
