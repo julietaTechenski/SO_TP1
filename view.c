@@ -30,7 +30,7 @@ int main(int argc, char* argv[]){
 
     int fd;
 
-    if((fd = shm_open(NAME_SHM, O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1)
+    if((fd = shm_open(NAME_SHM, O_CREAT | O_RDWR, 0644)) == -1)
     errExit("Error creating shared memory\n");
 
     if(ftruncate(fd, sizeof(struct shmbuf)) == -1)
