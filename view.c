@@ -55,19 +55,36 @@ int main(int argc, char* argv[]){
         exit(EXIT_FAILURE);
     }
 
+    shmp->index = 0; // initializing index to zero
 
     while(!shutdown_flag){
-        if(sem_wait(&shmp->sem_read) == -1){
+        if(sem_wait(&shmp->sem_read) == -1){   // waits to be sth to read
             perror("Error in semaphores in view\n");
             exit(EXIT_FAILURE);
         }
 
-        printf("%s", shmp->buf);
-
-        if(sem_post(&shmp->sem_write) == -1) {
+        if(sem_wait(&shmp->sem_mutex) == -1){   // waits to have access to the shm
             perror("Error in semaphores in view\n");
             exit(EXIT_FAILURE);
         }
+
+        int i;
+        for(i = shmp->index; shmp->buf[i] != '\0'; i++)
+            printf("%s", shmp->buf[i]);
+
+        printf("\n");
+        shmp->index+=i;
+
+        if(sem_post(&shmp->sem_post) == -1){
+            perror("Error in semaphores in view\n");
+            exit(EXIT_FAILURE);
+        }
+
+        if(sem_post(&shmp->sem_mutex) == -1){   // waits to have access to the shm
+            perror("Error in semaphores in view\n");
+            exit(EXIT_FAILURE);
+        }
+
     }
     return 0;
 }
