@@ -2,21 +2,17 @@
 #include <unistd.h>
 #include <sys/mman.h>  // for shm
 #include <sys/select.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <semaphore.h>
 #include <string.h>
 #include <stdlib.h>
-#include <time.h>
-#include <errno.h>
 
 #define CHILD "./child"
 #define BUF_SIZE 1024
 #define READ_BUF_AUX_SIZE 64
 #define NAME_SHM "/app_shm"
 
-#define errExit(msg)    {perror(msg); exit(EXIT_FAILURE);}
+#define errExit(msg) {perror(msg); exit(EXIT_FAILURE);}
 
 struct shmbuf {
     sem_t  sem_mutex;            /* POSIX unnamed semaphore */
@@ -117,7 +113,7 @@ int main(int argc, char* argv[]){
             errExit("Select error\n");
 
         //Check what's available to read
-        int aux=0;
+        size_t aux;
         char aux_buff[READ_BUF_AUX_SIZE];
         for(int i = 0; i < children_amount && available != 0; i++) {
             if(FD_ISSET(pipefd[i][0], &read_set_aux) != 0) {
