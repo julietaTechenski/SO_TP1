@@ -9,6 +9,8 @@
 
 #include "head.h"
 
+#define READ_BUF_AUX_SIZE 64
+
 int main(int argc, char* argv[]){
     if(argc == 1)
         errExit("Give at least one file to convert\n");
@@ -83,8 +85,8 @@ int main(int argc, char* argv[]){
             errExit("Execve error\n");
         }
 
-        if(nfds < cpid)
-            nfds = cpid;
+        if(pipefd[i][1] > nfds)
+            nfds = pipefd[i][1];
     }
 
     nfds++; // select argument convention
@@ -105,7 +107,7 @@ int main(int argc, char* argv[]){
         for(int i = 0; i < children_amount && available != 0; i++) {
             if(FD_ISSET(pipefd[i][0], &read_set_aux) != 0) {
                 aux = read(pipefd[i][0], aux_buff, READ_BUF_AUX_SIZE);
-                if(shmp->cnt+aux > BUF_SIZE)
+                if(shmp->cnt + aux > BUF_SIZE)
                     errExit("No space left on buffer\n");
 
                 // Give an additional file to process
