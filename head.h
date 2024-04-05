@@ -1,6 +1,7 @@
 #define CHILD "./child"
 #define BUF_SIZE 1024
 #define NAME_SHM "/app_shm"
+#define MAX_PATH_LENGTH 128
 
 #define errExit(msg) {perror(msg); exit(EXIT_FAILURE);}
 
