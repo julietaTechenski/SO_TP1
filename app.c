@@ -73,8 +73,8 @@ int main(int argc, char* argv[]){
             char *newargv[] = {CHILD, NULL};  // passing first files as argument
             char *newenviron[] = {NULL};
 
-            dup2(pipefd[i][0], STDOUT_FILENO);
-            dup2(pipefd[i][1], STDIN_FILENO);
+            dup2(pipefd[i][0], STDIN_FILENO);
+            dup2(pipefd[i][1], STDOUT_FILENO);
             for (int j = 0; j < i; ++j) {       //closing fd with other child except mine
                 close(pipefd[j][0]);
                 close(pipefd[j][1]);
