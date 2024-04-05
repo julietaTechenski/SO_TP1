@@ -1,6 +1,5 @@
 #define CHILD "./child"
 #define BUF_SIZE 1024
-#define READ_BUF_AUX_SIZE 64
 #define NAME_SHM "/app_shm"
 #define MAX_PATH_LENGTH 128
 

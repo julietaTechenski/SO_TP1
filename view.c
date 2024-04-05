@@ -39,8 +39,9 @@ int main(int argc, char* argv[]){
 
     int fd;
 
+
     if((fd = shm_open(shmpath, O_RDWR, 0644)) == -1)
-    errExit("Error creating shared memory\n");
+      errExit("Error creating shared memory\n");
 
 
     //mapping shm into the caller's address space
