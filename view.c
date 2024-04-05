@@ -26,16 +26,12 @@ int main(int argc, char* argv[]){
     // creating signal handler for when shm is unlinked
     signal(SIGINT, shm_unlink_handler);
 
-    char shmpath[128];
-
+    char shmpath[MAX_PATH_LENGTH];
     if(!isatty(fileno(stdin))){
-        if(scanf("%127s", shmpath) != 1){
-            errExit("View could not read the file name through a pipe\n");
-        }
+        fgets(shmpath, MAX_PATH_LENGTH, stdin);
     }else{
-        if(read(STDOUT_FILENO, shmpath, 128) == -1){
-            errExit("View could not read the file name from STDOUT\n");
-        }
+        fgets(shmpath, MAX_PATH_LENGTH, stdout);
+        printf("%s\n", shmpath);
     }
 
     // opening shm object
