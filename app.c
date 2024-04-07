@@ -31,6 +31,7 @@ int main(int argc, char* argv[]){
     if (sem_init(&shmp->sem_mutex, 1, 1) == -1)
         errExit("Error initializing semaphore mutex\n");
 
+    printf("%s", NAME_SHM);
     sleep(5);
 
     // pipes' variables
