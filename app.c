@@ -111,6 +111,7 @@ int main(int argc, char* argv[]){
                 }else{
                     close(pipefd[i][0]);
                     close(pipefd[i][1]);
+                    FD_CLR(pipefd[i][0], &rfds);
                 }
 
                 if(sem_wait(&(shmp->sem_mutex)) == -1)
