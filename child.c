@@ -28,6 +28,19 @@ int main(int argc, char* argv[]) {
             printf("Error popen() failed");
             return -1;
         }
+
+        //Reading output
+        char md5[MD5_SIZE + 1];
+        if (read(fileno(child_pipe), md5, MD5_SIZE) != MD5_SIZE) {
+            printf("Error read() failed");
+            return -1;
+        }
+        md5[MD5_SIZE] = '\0';
+
+        pclose(child_pipe);
+
+        //Returning md5 to parent
+        printf("%s - %s - %d\n", files, md5, pid);
     }
 
     return 0;
