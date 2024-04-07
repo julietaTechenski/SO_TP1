@@ -15,6 +15,10 @@ int main(int argc, char* argv[]) {
 
     //Reading file to use
     while ((bytes_read = read(STDIN_FILENO, files, sizeof(files))) > 0) {
+        if(files[bytes_read - 1] == '\n'){
+            bytes_read--;
+        }
+        files[bytes_read] = '\0';
 
         //Building command
         int size = bytes_read + sizeof(MD5SUM) + 1;
