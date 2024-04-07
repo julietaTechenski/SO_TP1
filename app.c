@@ -137,7 +137,7 @@ int main(int argc, char* argv[]){
         }
     }
 
-    shm_unlink(NAME_SHM);
+//    shm_unlink(NAME_SHM);
     return 0;
 }
 
