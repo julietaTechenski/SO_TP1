@@ -6,6 +6,8 @@
 
 #define MAX_LEN 1024
 #define MD5_SIZE 32
+#define MD5SUM "md5sum"
+#define READING "r"
 
 int main(int argc, char* argv[]) {
     pid_t pid = getpid();
