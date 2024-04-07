@@ -1,3 +1,11 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/mman.h>  // for shm
+#include <fcntl.h>
+#include <semaphore.h>
+#include <string.h>
+#include <stdlib.h>
+
 #define CHILD "./child"
 #define BUF_SIZE 1024
 #define NAME_SHM "/app_shm"

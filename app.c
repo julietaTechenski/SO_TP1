@@ -1,11 +1,4 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/mman.h>  // for shm
 #include <sys/select.h>
-#include <fcntl.h>
-#include <semaphore.h>
-#include <string.h>
-#include <stdlib.h>
 
 #include "head.h"
 
