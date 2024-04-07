@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/wait.h>
 
 #define MAX_LEN 1024
 #define MD5_SIZE 32
