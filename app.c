@@ -156,6 +156,7 @@ int main(int argc, char* argv[]){
     }
 
     unlink(NAME_SHM);
+    close(shm_fd);
     return 0;
 }
 

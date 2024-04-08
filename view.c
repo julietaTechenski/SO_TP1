@@ -6,19 +6,11 @@ void shm_unlink_handler(int sig);
 
 volatile sig_atomic_t shutdown_flag = 0;
 
-void shm_unlink_handler(int sig) {
-    if(sig == SIGINT){
-        shutdown_flag = 1;
-    }
-}
-
 /*
  * stdin as parameter: pathname of a shared memory object and the string that is to be copied
  * */
 int main(int argc, char* argv[]){
     // creating signal handler for when shm is unlinked
-    signal(SIGINT, shm_unlink_handler);
-
     char shmpath[MAX_PATH_LENGTH];
     if(!isatty(fileno(stdin))){
         fgets(shmpath, MAX_PATH_LENGTH, stdin);
