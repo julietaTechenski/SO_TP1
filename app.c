@@ -9,7 +9,7 @@ int main(int argc, char* argv[]){
         errExit("Give at least one file to convert\n");
 
     int to_read = argc-1;
-    int children_amount = (to_read)/10 + 1;
+    int children_amount = (to_read)/5 + 1;
 
     int shm_fd;
     struct shmbuf * shmp;
@@ -31,12 +31,14 @@ int main(int argc, char* argv[]){
     if (sem_init(&shmp->sem_mutex, 1, 1) == -1)
         errExit("Error initializing semaphore mutex\n");
 
-    printf("%s\n", NAME_SHM);
+    printf("%s", NAME_SHM);
     sleep(5);
 
     // pipes' variables
-    int pipe1[children_amount][2];
-    int pipe2[children_amount][2];
+    int pipeWAux[2];
+    int fdW[children_amount];
+    int pipeRAux[2];
+    int fdR[children_amount];
     pid_t cpid;
 
     // pipes' validation
@@ -50,15 +52,17 @@ int main(int argc, char* argv[]){
 
     for(int i = 0; i < children_amount; i++){
         //creating pipe between app and child
-        if(pipe(pipe1[i]) == -1)
-        errExit("Error generating pipe_app\n");
+        if(pipe(pipeWAux) == -1)
+            errExit("Error generating pipe_app\n");
+        fdW[i]= pipeWAux[1];
 
-        if(pipe(pipe2[i]) == -1)
-        errExit("Error generating pipe_chld\n");
+        if(pipe(pipeRAux) == -1)
+            errExit("Error generating pipe_chld\n");
+        fdR[i] = pipeRAux[0];
 
-        write(pipe1[i][1], argv[index], strlen(argv[index])); //giving 1 file to convert
+        write(fdW[i], argv[index], strlen(argv[index]) + 1); //giving 1 file to convert
         index++;
-        FD_SET(pipe2[i][0], &rfds);  // adding fds to rfds select argument
+        FD_SET(fdR[i], &rfds);  // adding fds to rfds select argument
 
         //-------------------------------------------------------------------
 
@@ -71,18 +75,15 @@ int main(int argc, char* argv[]){
             char *newargv[] = {CHILD, NULL};  // passing first files as argument
             char *newenviron[] = {NULL};
 
-            dup2(pipe1[i][0], STDIN_FILENO);  //child reading from stdin
-            close(pipe1[i][0]);   //child reading pipe
+            dup2(pipeWAux[0], STDIN_FILENO);  //child reading from stdin
+            close(pipeWAux[0]);   //child reading pipe
 
-            dup2(pipe2[i][1], STDOUT_FILENO); //child writing to stdout
-            close(pipe2[i][1]);   //child writing pipe
-
+            dup2(pipeRAux[1], STDOUT_FILENO); //child writing to stdout
+            close(pipeRAux[1]);   //child writing pipe
 
             for (int j = 0; j <= i; ++j) {       //closing fd with other child except mine
-                close(pipe1[j][1]);
-                close(pipe2[j][0]);
-                if(j<i)
-                    close(pipe2[j][1]);
+                close(fdW[j]);
+                close(fdR[j]);
             }
 
             execve(newargv[0], newargv, newenviron);
@@ -90,12 +91,11 @@ int main(int argc, char* argv[]){
             errExit("Execve error\n");
         }
 
-        //closing parent unused pipes
-        close(pipe1[i][0]);
-//        close(pipe2[i][1]);
+        close(pipeWAux[0]);
+        close(pipeRAux[1]);
 
-        if(pipe2[i][0] > nfds)
-            nfds = pipe2[i][0];
+        if(fdR[i] > nfds)
+            nfds = fdR[i];
     }
 
     nfds++; // select argument convention
@@ -113,33 +113,30 @@ int main(int argc, char* argv[]){
         size_t aux;
         char aux_buff[READ_BUF_AUX_SIZE];
         for(int i = 0; i < children_amount && available != 0; i++) {
-            if(FD_ISSET(pipe2[i][0], &read_set_aux) != 0) {
+            if(FD_ISSET(fdR[i], &read_set_aux) != 0) {
 
-                aux = read(pipe2[i][0], aux_buff, READ_BUF_AUX_SIZE);
-                if(aux == -1){
+                aux = read(fdR[i], aux_buff, READ_BUF_AUX_SIZE);
+                if(aux == -1)
                     errExit("Error reading from pipe\n");
-                }
+
+                if(shmp->cnt + aux > BUF_SIZE)
+                    errExit("No space left on buffer\n");
 
                 // Give an additional file to process
                 // If there's not left files, close the pipes
-                if(index<=argc) {
-                    write(pipe1[i][1], argv[index], strlen(argv[index]));
+                if(index<argc) {
+                    write(fdW[i], argv[index], strlen(argv[index]));
                     index++;
                 }else{
-                    close(pipe1[i][1]);
-
-                    FD_CLR(pipe2[i][0], &rfds);
-                    close(pipe2[i][0]);
+                    close(fdW[i]);
+                    close(fdR[i]);
+                    FD_CLR(fdR[i], &rfds);
                 }
 
                 if(sem_wait(&(shmp->sem_mutex)) == -1)
                     errExit("Error while waiting to write\n");
 
                 //---------------WRITE ON SHM--------------------------
-
-                if(shmp->cnt + aux > BUF_SIZE)
-                errExit("No space left on buffer\n");
-
                 for(int j = 0; j < aux; ++j)
                     shmp->buf[shmp->cnt + j] = aux_buff[j];
                 shmp->cnt += aux;
@@ -158,7 +155,7 @@ int main(int argc, char* argv[]){
         }
     }
 
-    shm_unlink(NAME_SHM);
+    //shm_unlink(NAME_SHM);
     return 0;
 }
 

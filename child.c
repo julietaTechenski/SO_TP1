@@ -1,4 +1,3 @@
-
 #include "head.h"
 
 #define MAX_LEN 1024
@@ -13,11 +12,8 @@ int main(int argc, char* argv[]) {
     ssize_t bytes_read;
 
     //Reading file to use
-    while ((bytes_read = read(STDIN_FILENO, files, sizeof(files))) > 0) {
-        if(files[bytes_read - 1] == '\n'){
-            bytes_read--;
-        }
-        files[bytes_read] = '\0';
+    while ((bytes_read = read(STDIN_FILENO, files, MAX_LEN)) > 0) {
+        files[bytes_read] = 0;
 
         //Building command
         int size = bytes_read + sizeof(MD5SUM) + 1;
