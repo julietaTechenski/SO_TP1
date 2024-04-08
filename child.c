@@ -1,7 +1,5 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
+
+#include "head.h"
 
 #define MAX_LEN 1024
 #define MD5_SIZE 32
@@ -30,22 +28,27 @@ int main(int argc, char* argv[]) {
         //Creating pipes for child_md5 process
         FILE * child_pipe = popen(command, READING);
         if (child_pipe == NULL) {
-            printf("Error popen() failed");
-            return -1;
+            errExit("Error popen() failed");
         }
 
         //Reading output
         char md5[MD5_SIZE + 1];
         if (read(fileno(child_pipe), md5, MD5_SIZE) != MD5_SIZE) {
-            printf("Error read() failed");
-            return -1;
+            errExit("Error read() failed");
         }
         md5[MD5_SIZE] = '\0';
 
         pclose(child_pipe);
 
-        //Returning md5 to parent
-        printf("%s - %s - %d\n", files, md5, pid);
+        char buffer[MAX_LEN + MD5_SIZE + 50];  // Ajusta el tamaño según necesites
+        int length = snprintf(buffer, sizeof(buffer), "%s - %s - %d\n", files, md5, pid);
+        if (length < 0 || length >= sizeof(buffer)) {
+            errExit("snprintf");
+        }
+
+        if (write(STDOUT_FILENO, buffer, length) != length) {
+            errExit("Error writing to parent pipe from child");
+        }
     }
 
     return 0;
