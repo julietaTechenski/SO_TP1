@@ -14,7 +14,6 @@
 #define errExit(msg) {perror(msg); exit(EXIT_FAILURE);}
 
 struct shmbuf{
-    sem_t  sem_mutex;            /* POSIX unnamed semaphore */
     sem_t  sem_read;            /* POSIX unnamed semaphore */
     size_t index;             /* Index of reading */
     size_t cnt;             /* Number of bytes used in 'buf' */

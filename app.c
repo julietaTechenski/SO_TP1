@@ -8,6 +8,8 @@ int main(int argc, char* argv[]){
     if(argc == 1)
         errExit("Give at least one file to convert\n");
 
+    setvbuf(stdout,NULL,_IONBF,0);
+
     int to_read = argc-1;
     int children_amount = (to_read)/5 + 1;
 
@@ -28,9 +30,6 @@ int main(int argc, char* argv[]){
     if (sem_init(&shmp->sem_read, 1, 0) == -1)
         errExit("Error initializing semaphore read\n");
 
-    if (sem_init(&shmp->sem_mutex, 1, 1) == -1)
-        errExit("Error initializing semaphore mutex\n");
-
     printf("%s", NAME_SHM);
     sleep(5);
 
@@ -43,9 +42,9 @@ int main(int argc, char* argv[]){
 
     // pipes' validation
 
-    fd_set rfds, read_set_aux;
-    FD_ZERO(&rfds);
-    FD_ZERO(&read_set_aux);
+    fd_set read_fd_set, read_fd_set_aux;
+    FD_ZERO(&read_fd_set);
+    FD_ZERO(&read_fd_set_aux);
 
     int nfds = 0;  //highest numbered file descriptor
     int index = 1; //index of file to be sent to child
@@ -62,7 +61,7 @@ int main(int argc, char* argv[]){
 
         write(fdW[i], argv[index], strlen(argv[index]) + 1); //giving 1 file to convert
         index++;
-        FD_SET(fdR[i], &rfds);  // adding fds to rfds select argument
+        FD_SET(fdR[i], &read_fd_set);  // adding fds to rfds select argument
 
         //-------------------------------------------------------------------
 
@@ -104,8 +103,8 @@ int main(int argc, char* argv[]){
 
     while(retrieved < to_read){
         //Create aux set to execute select
-        read_set_aux = rfds;
-        int available = select(nfds, &read_set_aux, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
+        read_fd_set_aux = read_fd_set;
+        int available = select(nfds, &read_fd_set_aux, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
         if(available == -1)
             errExit("Select error\n");
 
@@ -113,7 +112,7 @@ int main(int argc, char* argv[]){
         size_t aux;
         char aux_buff[READ_BUF_AUX_SIZE];
         for(int i = 0; i < children_amount && available != 0; i++) {
-            if(FD_ISSET(fdR[i], &read_set_aux) != 0) {
+            if(FD_ISSET(fdR[i], &read_fd_set_aux) != 0) {
 
                 aux = read(fdR[i], aux_buff, READ_BUF_AUX_SIZE);
                 if(aux == -1)
@@ -130,11 +129,8 @@ int main(int argc, char* argv[]){
                 }else{
                     close(fdW[i]);
                     close(fdR[i]);
-                    FD_CLR(fdR[i], &rfds);
+                    FD_CLR(fdR[i], &read_fd_set);
                 }
-
-                if(sem_wait(&(shmp->sem_mutex)) == -1)
-                    errExit("Error while waiting to write\n");
 
                 //---------------WRITE ON SHM--------------------------
                 for(int j = 0; j < aux; ++j)
@@ -142,9 +138,6 @@ int main(int argc, char* argv[]){
                 shmp->cnt += aux;
                 shmp->buf[shmp->cnt++]= 0;
                 //-----------------------------------------------------
-
-                if(sem_post(&(shmp->sem_mutex)) == -1)
-                    errExit("Error while posting sem\n");
 
                 if(sem_post(&(shmp->sem_read)) == -1)
                     errExit("Error while posting sem\n");
@@ -155,7 +148,7 @@ int main(int argc, char* argv[]){
         }
     }
 
-    //shm_unlink(NAME_SHM);
+    shm_unlink(NAME_SHM);
     return 0;
 }
 
