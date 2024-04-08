@@ -119,7 +119,6 @@ int main(int argc, char* argv[]){
                 if(aux == -1){
                     errExit("Error reading from pipe\n");
                 }
-                printf("%s\n", aux_buff);
 
                 // Give an additional file to process
                 // If there's not left files, close the pipes
@@ -159,7 +158,7 @@ int main(int argc, char* argv[]){
         }
     }
 
-//    shm_unlink(NAME_SHM);
+    shm_unlink(NAME_SHM);
     return 0;
 }
 
