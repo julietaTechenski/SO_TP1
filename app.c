@@ -10,12 +10,11 @@ int main(int argc, char* argv[]){
 
     setvbuf(stdout,NULL,_IONBF,0);
 
-    int to_read = argc-1;
-    int children_amount = (to_read)/5 + 1;
-
+    //shm variables
     int shm_fd;
     struct shmbuf * shmp;
 
+    //-----------------------shm init--------------------------------------
     if((shm_fd = shm_open(NAME_SHM, O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1)
         errExit("Error creating shared memory\n");
 
@@ -25,23 +24,27 @@ int main(int argc, char* argv[]){
     shmp = mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE,MAP_SHARED, shm_fd, 0);
     if (shmp == MAP_FAILED)
         errExit("Mmap error\n");
+    //--------------------------------------------------------------------
 
     // initializing semaphore in 0
-    if (sem_init(&shmp->sem_read, 1, 0) == -1)
+    if (sem_init(&shmp->left_to_read, 1, 0) == -1)
         errExit("Error initializing semaphore read\n");
 
-    printf("%s", NAME_SHM);
+    //waiting view
+    printf("%s\n", NAME_SHM);
     sleep(5);
+
+    //read variables
+    int to_read = argc-1;
+    int children_amount = (to_read)/10 + 1;
 
     // pipes' variables
     int pipeWAux[2];
-    int fdW[children_amount];
     int pipeRAux[2];
-    int fdR[children_amount];
+    int fdRW[children_amount][2];
     pid_t cpid;
 
     // pipes' validation
-
     fd_set read_fd_set, read_fd_set_aux;
     FD_ZERO(&read_fd_set);
     FD_ZERO(&read_fd_set_aux);
@@ -53,15 +56,15 @@ int main(int argc, char* argv[]){
         //creating pipe between app and child
         if(pipe(pipeWAux) == -1)
             errExit("Error generating pipe_app\n");
-        fdW[i]= pipeWAux[1];
+        fdRW[i][1]= pipeWAux[1];
 
         if(pipe(pipeRAux) == -1)
             errExit("Error generating pipe_chld\n");
-        fdR[i] = pipeRAux[0];
+        fdRW[i][0] = pipeRAux[0];
 
-        write(fdW[i], argv[index], strlen(argv[index]) + 1); //giving 1 file to convert
+        write(fdRW[i][1], argv[index], strlen(argv[index]) + 1); //giving 1 file to convert
         index++;
-        FD_SET(fdR[i], &read_fd_set);  // adding fds to rfds select argument
+        FD_SET(fdRW[i][0], &read_fd_set);  // adding fds to rfds select argument
 
         //-------------------------------------------------------------------
 
@@ -81,8 +84,8 @@ int main(int argc, char* argv[]){
             close(pipeRAux[1]);   //child writing pipe
 
             for (int j = 0; j <= i; ++j) {       //closing fd with other child except mine
-                close(fdW[j]);
-                close(fdR[j]);
+                close(fdRW[j][0]);
+                close(fdRW[j][1]);
             }
 
             execve(newargv[0], newargv, newenviron);
@@ -93,8 +96,8 @@ int main(int argc, char* argv[]){
         close(pipeWAux[0]);
         close(pipeRAux[1]);
 
-        if(fdR[i] > nfds)
-            nfds = fdR[i];
+        if(fdRW[i][0] > nfds)
+            nfds = fdRW[i][0];
     }
 
     nfds++; // select argument convention
@@ -112,34 +115,34 @@ int main(int argc, char* argv[]){
         size_t aux;
         char aux_buff[READ_BUF_AUX_SIZE];
         for(int i = 0; i < children_amount && available != 0; i++) {
-            if(FD_ISSET(fdR[i], &read_fd_set_aux) != 0) {
+            if(FD_ISSET(fdRW[i][0], &read_fd_set_aux) != 0) {
 
-                aux = read(fdR[i], aux_buff, READ_BUF_AUX_SIZE);
+                aux = read(fdRW[i][0], aux_buff, READ_BUF_AUX_SIZE);
                 if(aux == -1)
                     errExit("Error reading from pipe\n");
 
-                if(shmp->cnt + aux > BUF_SIZE)
+                if(shmp->index_of_writing + aux > BUF_SIZE)
                     errExit("No space left on buffer\n");
 
                 // Give an additional file to process
                 // If there's not left files, close the pipes
                 if(index<argc) {
-                    write(fdW[i], argv[index], strlen(argv[index]));
+                    write(fdRW[i][1], argv[index], strlen(argv[index]));
                     index++;
                 }else{
-                    close(fdW[i]);
-                    close(fdR[i]);
-                    FD_CLR(fdR[i], &read_fd_set);
+                    close(fdRW[i][1]);
+                    close(fdRW[i][0]);
+                    FD_CLR(fdRW[i][0], &read_fd_set);
                 }
 
                 //---------------WRITE ON SHM--------------------------
                 for(int j = 0; j < aux; ++j)
-                    shmp->buf[shmp->cnt + j] = aux_buff[j];
-                shmp->cnt += aux;
-                shmp->buf[shmp->cnt++]= 0;
+                    shmp->buf[shmp->index_of_writing + j] = aux_buff[j];
+                shmp->index_of_writing += aux;
+                shmp->buf[shmp->index_of_writing++]= 0;
                 //-----------------------------------------------------
 
-                if(sem_post(&(shmp->sem_read)) == -1)
+                if(sem_post(&(shmp->left_to_read)) == -1)
                     errExit("Error while posting sem\n");
 
                 retrieved++;
@@ -149,6 +152,7 @@ int main(int argc, char* argv[]){
     }
 
     shm_unlink(NAME_SHM);
+    close(shm_fd);
     return 0;
 }
 

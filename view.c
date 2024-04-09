@@ -2,19 +2,13 @@
 
 #include "head.h"
 
-void shm_unlink_handler(int sig);
-
-volatile sig_atomic_t shutdown_flag = 0;
-
-/*
- * stdin as parameter: pathname of a shared memory object and the string that is to be copied
- * */
 int main(int argc, char* argv[]){
-    // creating signal handler for when shm is unlinked
+
     char shmpath[MAX_PATH_LENGTH];
-    if(!isatty(fileno(stdin)))
-        read(STDIN_FILENO, shmpath, MAX_PATH_LENGTH);
-    else if(argc > 1)
+    if(argc == 1) {
+        fgets(shmpath, MAX_PATH_LENGTH, stdin);
+        shmpath[strlen(shmpath) - 1] = 0; //reading \n
+    }else if(argc == 2)
         strcpy(shmpath,argv[1]);
     else
         errExit("Incorrect amount of parameters for view, try running with with a pipe or a shm path as parameter\n");
@@ -31,19 +25,19 @@ int main(int argc, char* argv[]){
     if(shmp == MAP_FAILED)
         errExit("shm couldn't be mapped\n");
 
-    shmp->index = 0; // initializing index to zero
+    shmp->index_of_reading = 0; // initializing index to zero
 
-    while(!shutdown_flag){
-        if(sem_wait(&shmp->sem_read) == -1)   // waits to be sth to read
+    while(1){
+        if(sem_wait(&shmp->left_to_read) == -1)   // waits to be sth to read
             errExit("Error in semaphores in view\n");
 
-        int aux = printf("%s", &shmp->buf[shmp->index]);
-        printf("\n");
-        shmp->index += aux;
-        shmp->index++; //salir del null
-
+        int aux = printf("%s", &shmp->buf[shmp->index_of_reading]);
+        shmp->index_of_reading += aux;
+        shmp->index_of_reading++; //salir del null
     }
 
-    close(fd);
+    sem_destroy(&shmp->left_to_read);
+    //munmap();
+    
     return 0;
 }
