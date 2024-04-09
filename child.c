@@ -5,6 +5,20 @@
 #define MD5SUM "md5sum"
 #define READING "r"
 
+void generateAnswer(char * file, char * md5, int pid){
+    char answer[MAX_LEN + MD5_SIZE + 50];
+    int length = snprintf(answer, sizeof(answer), "%s - %s - %d\n", file, md5, pid);
+
+    if (length < 0 || length >= sizeof(answer)) {
+        errExit("snprintf");
+    }
+
+    if (write(STDOUT_FILENO, answer, length) != length) {
+        errExit("Error writing to parent pipe from child");
+    }
+    return;
+}
+
 int main(int argc, char* argv[]) {
     pid_t pid = getpid();
 
@@ -36,15 +50,8 @@ int main(int argc, char* argv[]) {
 
         pclose(child_pipe);
 
-        char buffer[MAX_LEN + MD5_SIZE + 50];  // Ajusta el tamaño según necesites
-        int length = snprintf(buffer, sizeof(buffer), "%s - %s - %d\n", files, md5, pid);
-        if (length < 0 || length >= sizeof(buffer)) {
-            errExit("snprintf");
-        }
+        generateAnswer(files, md5, pid);
 
-        if (write(STDOUT_FILENO, buffer, length) != length) {
-            errExit("Error writing to parent pipe from child");
-        }
     }
 
     return 0;
