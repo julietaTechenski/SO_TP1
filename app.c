@@ -76,10 +76,10 @@ int main(int argc, char* argv[]){
         fdRW[i][0] = pipeRAux[0];
 
         //giving child 2 starting files
-        int cant_sent = sendChildFile(fdW[i], argc, argv, index, INITIAL_AMOUNT);
+        int cant_sent = sendChildFile(fdRW[i][1], argc, argv, index, INITIAL_AMOUNT);
         index += cant_sent;
 
-        FD_SET(fdR[i], &read_fd_set);  // adding fds to rfds select argument
+        FD_SET(fdRW[i][0], &read_fd_set);  // adding fds to rfds select argument
 
         //-------------------------------------------------------------------
 
@@ -132,7 +132,7 @@ int main(int argc, char* argv[]){
         for(int i = 0; i < children_amount && available != 0; i++) {
             if(FD_ISSET(fdRW[i][0], &read_fd_set_aux) != 0) {
 
-                aux = read(fdR[i], aux_buff, READ_BUF_AUX_SIZE);
+                aux = read(fdRW[i][0], aux_buff, READ_BUF_AUX_SIZE);
                 if(initial_amount_read[i] != 0){
                     initial_amount_read[i]--;
                 }
@@ -145,12 +145,12 @@ int main(int argc, char* argv[]){
                 // Give an additional file to process
                 // If there's not left files, close the pipes
                 if(initial_amount_read[i] <= 0){
-                    int cant_sent = sendChildFile(fdW[i], argc, argv, index, 1);
+                    int cant_sent = sendChildFile(fdRW[i][1], argc, argv, index, 1);
                     index += cant_sent;
                     if(cant_sent == 0){
-                        close(fdW[i]);
-                        close(fdR[i]);
-                        FD_CLR(fdR[i], &read_fd_set);
+                        close(fdRW[i][0]);
+                        close(fdRW[i][1]);
+                        FD_CLR(fdRW[i][0], &read_fd_set);
                     }
                }
 
