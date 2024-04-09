@@ -3,17 +3,14 @@
 #include "head.h"
 
 #define READ_BUF_AUX_SIZE 1024
-#define INITIAL_AMOUNT 1
+#define INITIAL_AMOUNT 2
 
 int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
     if(cant_files == 0 || index == argc) {
         return 0;
     }
-    int size = strlen(argv[index]);
-    char file[size + 1];
-    strcpy(file, argv[index]);
-    file[size+1] = '\0';
-    write(fd, file, sizeof(file));
+    write(fd, argv[index], strlen(argv[index]) + 1);
+    write(fd, "\n", 1);
     return 1 + sendChildFile(fd, argc, argv, index+1, cant_files-1);
 }
 
@@ -28,7 +25,7 @@ int main(int argc, char* argv[]){
 
     int initial_amount_read[children_amount];
     for(int i = 0; i < children_amount ; i++){
-        initial_amount_read[i] = 0;
+        initial_amount_read[i] = INITIAL_AMOUNT;
     }
 
     int shm_fd;
@@ -80,8 +77,7 @@ int main(int argc, char* argv[]){
         //giving child 2 starting files
         int cant_sent = sendChildFile(fdW[i], argc, argv, index, INITIAL_AMOUNT);
         index += cant_sent;
-        //write(fdW[i], argv[index], strlen(argv[index]) + 1); //giving 1 file to convert
-        //index++;
+
         FD_SET(fdR[i], &read_fd_set);  // adding fds to rfds select argument
 
         //-------------------------------------------------------------------
@@ -136,7 +132,9 @@ int main(int argc, char* argv[]){
             if(FD_ISSET(fdR[i], &read_fd_set_aux) != 0) {
 
                 aux = read(fdR[i], aux_buff, READ_BUF_AUX_SIZE);
-                initial_amount_read[i]++;
+                if(initial_amount_read[i] != 0){
+                    initial_amount_read[i]--;
+                }
                 if(aux == -1)
                 errExit("Error reading from pipe\n");
 
@@ -145,19 +143,15 @@ int main(int argc, char* argv[]){
 
                 // Give an additional file to process
                 // If there's not left files, close the pipes
-                if(initial_amount_read[i] >= INITIAL_AMOUNT){
+                if(initial_amount_read[i] <= 0){
                     int cant_sent = sendChildFile(fdW[i], argc, argv, index, 1);
-                    if(cant_sent != 0){
-                        //if(index<argc) {
-                        //write(fdW[i], argv[index], strlen(argv[index]));
-                        //index++;
-                        index += cant_sent;
-                    }else{
+                    index += cant_sent;
+                    if(cant_sent == 0){
                         close(fdW[i]);
                         close(fdR[i]);
                         FD_CLR(fdR[i], &read_fd_set);
                     }
-                }
+               }
 
 
                 //---------------WRITE ON SHM--------------------------
