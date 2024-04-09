@@ -7,7 +7,7 @@
 
 void creatingMD5Child(char * file, int file_size, char * md5){
     //Building command
-    int size = file_size + sizeof(MD5SUM) + 1;
+    int size = file_size + sizeof(MD5SUM) + 2;  //space and '\0'
     char command[size];
     sprintf(command, "%s %s", MD5SUM, file);
     command[size] = '\0';
@@ -43,21 +43,27 @@ void generateAnswer(char * file, char * md5, int pid){
 }
 
 int main(int argc, char* argv[]) {
+
     pid_t pid = getpid();
 
-    char files[MAX_LEN];
-    ssize_t bytes_read;
+    char * file = NULL;
+    size_t index_write = 0;
+    size_t index_read = 0;
 
     //Reading file to use
-    while ((bytes_read = read(STDIN_FILENO, files, MAX_LEN)) > 0) {
-        files[bytes_read] = 0;
+    while (getline(&file, &index_write, stdin) != -1) {
+
+        if(file[strlen(file) - 1] == '\n'){
+            file[strlen(file) - 1] = '\0';
+        }
 
         char md5[MD5_SIZE + 1];
-        creatingMD5Child(files, bytes_read, md5);
+        creatingMD5Child(file, strlen(file), md5);
 
-        generateAnswer(files, md5, pid);
+        generateAnswer(file, md5, pid);
+        index_read += strlen(file) + 1;
 
     }
-
+    free(file);
     return 0;
 }
