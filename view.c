@@ -27,7 +27,7 @@ int main(int argc, char* argv[]){
 
     shmp->index_of_reading = 0; // initializing index to zero
 
-    while(1){
+    while(!shmp->app_done_writing || shmp->index_of_writing != shmp->index_of_reading){
         if(sem_wait(&shmp->left_to_read) == -1)   // waits to be sth to read
             errExit("Error in semaphores in view\n");
 
@@ -37,7 +37,7 @@ int main(int argc, char* argv[]){
     }
 
     sem_destroy(&shmp->left_to_read);
-    //munmap();
-    
+    munmap(shmp, sizeof(*shmp));
+    close(fd);
     return 0;
 }

@@ -2,8 +2,8 @@
 
 #include "head.h"
 
-#define READ_BUF_AUX_SIZE 1024
-#define INITIAL_AMOUNT 2
+#define READ_BUF_AUX_SIZE 128
+#define INITIAL_AMOUNT 3
 
 int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
     if(cant_files == 0 || index == argc) {
@@ -24,12 +24,11 @@ int main(int argc, char* argv[]){
     int children_amount = (to_read)/5 + 1;
 
     int initial_amount_read[children_amount];
-    for(int i = 0; i < children_amount ; i++){
+    for(int i = 0; i < children_amount ; i++)
         initial_amount_read[i] = INITIAL_AMOUNT;
-    }
 
     int shm_fd;
-    struct shmbuf * shmp;
+    struct shmbuf *shmp;
 
     //-----------------------shm init--------------------------------------
     if((shm_fd = shm_open(NAME_SHM, O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1)
@@ -47,9 +46,13 @@ int main(int argc, char* argv[]){
     if (sem_init(&shmp->left_to_read, 1, 0) == -1)
         errExit("Error initializing semaphore read\n");
 
+    shmp->app_done_writing = 0;
+
     //waiting view
     printf("%s\n", NAME_SHM);
-    sleep(5);
+    sleep(2);
+
+    FILE * archivo = fopen("md5file.txt", "w");
 
     // pipes' variables
     int pipeWAux[2];
@@ -76,8 +79,7 @@ int main(int argc, char* argv[]){
         fdRW[i][0] = pipeRAux[0];
 
         //giving child 2 starting files
-        int cant_sent = sendChildFile(fdRW[i][1], argc, argv, index, INITIAL_AMOUNT);
-        index += cant_sent;
+        index += sendChildFile(fdRW[i][1], argc, argv, index, INITIAL_AMOUNT);
 
         FD_SET(fdRW[i][0], &read_fd_set);  // adding fds to rfds select argument
 
@@ -98,7 +100,7 @@ int main(int argc, char* argv[]){
             dup2(pipeRAux[1], STDOUT_FILENO); //child writing to stdout
             close(pipeRAux[1]);   //child writing pipe
 
-            for (int j = 0; j <= i; ++j) {       //closing fd with other child except mine
+            for (int j = 0; j <= i; ++j) {       //closing fd with other child and mine
                 close(fdRW[j][0]);
                 close(fdRW[j][1]);
             }
@@ -133,30 +135,30 @@ int main(int argc, char* argv[]){
             if(FD_ISSET(fdRW[i][0], &read_fd_set_aux) != 0) {
 
                 aux = read(fdRW[i][0], aux_buff, READ_BUF_AUX_SIZE);
-                if(initial_amount_read[i] != 0){
-                    initial_amount_read[i]--;
-                }
                 if(aux == -1)
                     errExit("Error reading from pipe\n");
-
+                if (aux == READ_BUF_AUX_SIZE)
+                    errExit("Enlarge aux read buffer\n");
                 if(shmp->index_of_writing + aux > BUF_SIZE)
                     errExit("No space left on buffer\n");
 
+                if(initial_amount_read[i] != 0)
+                    initial_amount_read[i]--;
+
                 // Give an additional file to process
                 // If there's not left files, close the pipes
-                if(initial_amount_read[i] <= 0){
+                if(initial_amount_read[i] == 0) {
                     int cant_sent = sendChildFile(fdRW[i][1], argc, argv, index, 1);
                     index += cant_sent;
-                    if(cant_sent == 0){
+                    if (cant_sent == 0) {
                         close(fdRW[i][0]);
                         close(fdRW[i][1]);
                         FD_CLR(fdRW[i][0], &read_fd_set);
                     }
-               }
-
+                }
 
                 //---------------WRITE ON SHM--------------------------
-                for(int j = 0; j < aux; ++j)
+                for (int j = 0; j < aux; ++j)
                     shmp->buf[shmp->index_of_writing + j] = aux_buff[j];
                 shmp->index_of_writing += aux;
                 shmp->buf[shmp->index_of_writing++]= 0;
@@ -165,14 +167,20 @@ int main(int argc, char* argv[]){
                 if(sem_post(&(shmp->left_to_read)) == -1)
                     errExit("Error while posting sem\n");
 
+                aux_buff[aux]=0;
+                fprintf(archivo, "%s", aux_buff);
+
                 retrieved++;
                 available--;
             }
         }
     }
 
-    shm_unlink(NAME_SHM);
+    fclose(archivo);
+    shmp->app_done_writing = 1;
+    munmap(shmp, sizeof(*shmp));
     close(shm_fd);
+    shm_unlink(NAME_SHM);
     return 0;
 }
 
