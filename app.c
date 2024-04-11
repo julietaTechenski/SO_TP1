@@ -6,6 +6,10 @@
 #define INITIAL_AMOUNT 3
 #define FILES_PER_CHILD 5
 
+void closeAuxPipes(int pipe1[2], int pipe2[2]){
+    close(pipe1[0]);
+    close(pipe2[1]);
+}
 int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
     if(cant_files == 0 || index == argc) {
         return 0;
@@ -115,9 +119,7 @@ int main(int argc, char* argv[]){
             //execve returns on error
             errExit("Execve error\n");
         }
-
-        close(pipeWAux[0]);
-        close(pipeRAux[1]);
+        closeAuxPipes(pipeWAux, pipeRAux);
 
         if(fdRW[i][0] > nfds)
             nfds = fdRW[i][0];
