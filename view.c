@@ -27,14 +27,27 @@ int main(int argc, char* argv[]){
 
     shmp->index_of_reading = 0; // initializing index to zero
 
-    while(!shmp->app_done_writing || shmp->index_of_writing != shmp->index_of_reading){
+    if(sem_wait(&(shmp->app_flag_mutex)) == -1)
+        errExit("Error while posting sem\n");
+
+    while(!shmp->app_done_writing || shmp->index_of_writing > shmp->index_of_reading){
+        if(sem_post(&(shmp->app_flag_mutex)) == -1)
+        errExit("Error while posting sem\n");
+
         if(sem_wait(&shmp->left_to_read) == -1)   // waits to be sth to read
             errExit("Error in semaphores in view\n");
 
         int aux = printf("%s", &shmp->buf[shmp->index_of_reading]);
-        shmp->index_of_reading += aux;
+        shmp->index_of_reading += aux; //car read - \n
         shmp->index_of_reading++; //salir del null
+        printf("\n");
+
+        if(sem_wait(&(shmp->app_flag_mutex)) == -1)
+        errExit("Error while posting sem\n");
     }
+
+    if(sem_post(&(shmp->app_flag_mutex)) == -1)
+    errExit("Error while posting sem\n");
 
     sem_destroy(&shmp->left_to_read);
     munmap(shmp, sizeof(*shmp));

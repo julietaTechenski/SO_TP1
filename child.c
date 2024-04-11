@@ -1,5 +1,6 @@
 #include "head.h"
 
+#define MAX_PID 5
 #define MAX_LEN 1024
 #define MD5_SIZE 32
 #define MD5SUM "md5sum"
@@ -10,36 +11,30 @@ void creatingMD5Child(char * file, int file_size, char * md5){
     int size = file_size + sizeof(MD5SUM) + 2;  //space and '\0'
     char command[size];
     sprintf(command, "%s %s", MD5SUM, file);
-    command[size] = '\0';
 
     //Creating pipes for child_md5 process
     FILE * child_pipe = popen(command, READING);
-    if (child_pipe == NULL) {
+    if (child_pipe == NULL)
         errExit("Error popen() failed");
-    }
 
     //Reading output
-    if (read(fileno(child_pipe), md5, MD5_SIZE) != MD5_SIZE) {
+    if (read(fileno(child_pipe), md5, MD5_SIZE) != MD5_SIZE)
         errExit("Error read() failed");
-    }
     md5[MD5_SIZE] = '\0';
 
     pclose(child_pipe);
-    return;
 }
 
-void generateAnswer(char * file, char * md5, int pid){
-    char answer[MAX_LEN + MD5_SIZE + 50];
-    int length = snprintf(answer, sizeof(answer), "%s - %s - %d\n", file, md5, pid);
+void generateAnswer(char * file, int size_file, char * md5, int pid){
+    int aux_size = size_file + MD5_SIZE + MAX_PID + 10;
+    char answer[aux_size];
+    int length = snprintf(answer, aux_size, "%s - %s - %d", file, md5, pid);
 
-    if (length < 0 || length >= sizeof(answer)) {
+    if (length < 0 || length >= aux_size)
         errExit("snprintf");
-    }
 
-    if (write(STDOUT_FILENO, answer, length) != length) {
+    if (write(STDOUT_FILENO, answer, length) != length)
         errExit("Error writing to parent pipe from child");
-    }
-    return;
 }
 
 int main(int argc, char* argv[]) {
@@ -47,22 +42,15 @@ int main(int argc, char* argv[]) {
     pid_t pid = getpid();
 
     char * file = NULL;
-    size_t index_write = 0;
-    size_t index_read = 0;
+    size_t size_of_file_buff = 0;
+    int aux_char_read;
+    char md5[MD5_SIZE + 1];
 
     //Reading file to use
-    while (getline(&file, &index_write, stdin) != -1) {
-
-        if(file[strlen(file) - 1] == '\n'){
-            file[strlen(file) - 1] = '\0';
-        }
-
-        char md5[MD5_SIZE + 1];
-        creatingMD5Child(file, strlen(file), md5);
-
-        generateAnswer(file, md5, pid);
-        index_read += strlen(file) + 1;
-
+    while ((aux_char_read = getline(&file, &size_of_file_buff, stdin)) != -1) {
+        file[aux_char_read-1] = '\0';
+        creatingMD5Child(file, aux_char_read-1, md5);
+        generateAnswer(file, aux_char_read-1, md5, pid);
     }
     free(file);
     return 0;

@@ -9,7 +9,7 @@ int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
     if(cant_files == 0 || index == argc) {
         return 0;
     }
-    write(fd, argv[index], strlen(argv[index]) + 1);
+    write(fd, argv[index], strlen(argv[index]));
     write(fd, "\n", 1);
     return 1 + sendChildFile(fd, argc, argv, index+1, cant_files-1);
 }
@@ -45,6 +45,10 @@ int main(int argc, char* argv[]){
     // initializing semaphore in 0
     if (sem_init(&shmp->left_to_read, 1, 0) == -1)
         errExit("Error initializing semaphore read\n");
+
+    // initializing semaphore in 0
+    if (sem_init(&shmp->app_flag_mutex, 1, 1) == -1)
+        errExit("Error initializing semaphore mutex\n");
 
     shmp->app_done_writing = 0;
 
@@ -134,6 +138,8 @@ int main(int argc, char* argv[]){
         for(int i = 0; i < children_amount && available != 0; i++) {
             if(FD_ISSET(fdRW[i][0], &read_fd_set_aux) != 0) {
 
+                //FILE * stream_child = fdopen(fdRW[i][0], "r");
+                //aux = getline(&aux_buff, &aux_buff_size, stream_child);
                 aux = read(fdRW[i][0], aux_buff, READ_BUF_AUX_SIZE);
                 if(aux == -1)
                     errExit("Error reading from pipe\n");
@@ -141,6 +147,7 @@ int main(int argc, char* argv[]){
                     errExit("Enlarge aux read buffer\n");
                 if(shmp->index_of_writing + aux > BUF_SIZE)
                     errExit("No space left on buffer\n");
+
 
                 if(initial_amount_read[i] != 0)
                     initial_amount_read[i]--;
@@ -167,8 +174,7 @@ int main(int argc, char* argv[]){
                 if(sem_post(&(shmp->left_to_read)) == -1)
                     errExit("Error while posting sem\n");
 
-                aux_buff[aux]=0;
-                fprintf(archivo, "%s", aux_buff);
+                fprintf(archivo, "%s\n", aux_buff);
 
                 retrieved++;
                 available--;
@@ -176,8 +182,14 @@ int main(int argc, char* argv[]){
         }
     }
 
-    fclose(archivo);
+
+    if(sem_wait(&(shmp->app_flag_mutex)) == -1)
+        errExit("Error while posting sem\n");
     shmp->app_done_writing = 1;
+    if(sem_post(&(shmp->app_flag_mutex)) == -1)
+        errExit("Error while posting sem\n");
+
+    fclose(archivo);
     munmap(shmp, sizeof(*shmp));
     close(shm_fd);
     shm_unlink(NAME_SHM);
