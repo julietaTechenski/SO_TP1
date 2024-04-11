@@ -7,15 +7,13 @@
 #include <stdlib.h>
 
 #define CHILD "./child"
-#define BUF_SIZE 4096
 #define NAME_SHM "/app_shm"
-#define MAX_PATH_LENGTH 128
 
 #define errExit(msg) {perror(msg); exit(EXIT_FAILURE);}
 
+#define BUF_SIZE 4096
 struct shmbuf{
-    char app_done_writing;
-    sem_t app_flag_mutex;
+    int cant_files_to_print;
     sem_t  left_to_read;            /* POSIX unnamed semaphore */
     size_t index_of_reading;             /* Index of reading */
     size_t index_of_writing;             /* Number of bytes used in 'buf' */

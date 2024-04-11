@@ -2,12 +2,15 @@
 
 #include "head.h"
 
+#define MAX_PATH_LENGTH 128
+
 int main(int argc, char* argv[]){
 
-    char shmpath[MAX_PATH_LENGTH];
+    char * shmpath = NULL;
+    size_t size_of_shmpath = 0;
     if(argc == 1) {
-        fgets(shmpath, MAX_PATH_LENGTH, stdin);
-        shmpath[strlen(shmpath) - 1] = 0; //reading \n
+        int aux = getline(&shmpath, &size_of_shmpath, stdin);
+        shmpath[aux-1] = 0; //reading \n
     }else if(argc == 2)
         strcpy(shmpath,argv[1]);
     else
@@ -27,12 +30,8 @@ int main(int argc, char* argv[]){
 
     shmp->index_of_reading = 0; // initializing index to zero
 
-    if(sem_wait(&(shmp->app_flag_mutex)) == -1)
-        errExit("Error while posting sem\n");
-
-    while(!shmp->app_done_writing || shmp->index_of_writing > shmp->index_of_reading){
-        if(sem_post(&(shmp->app_flag_mutex)) == -1)
-        errExit("Error while posting sem\n");
+    printf("FILE - MD5_HASH - SLAVE_PID\n");
+    while(shmp->cant_files_to_print){
 
         if(sem_wait(&shmp->left_to_read) == -1)   // waits to be sth to read
             errExit("Error in semaphores in view\n");
@@ -42,12 +41,8 @@ int main(int argc, char* argv[]){
         shmp->index_of_reading++; //salir del null
         printf("\n");
 
-        if(sem_wait(&(shmp->app_flag_mutex)) == -1)
-        errExit("Error while posting sem\n");
+        shmp->cant_files_to_print--;
     }
-
-    if(sem_post(&(shmp->app_flag_mutex)) == -1)
-    errExit("Error while posting sem\n");
 
     sem_destroy(&shmp->left_to_read);
     munmap(shmp, sizeof(*shmp));

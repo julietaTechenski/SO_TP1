@@ -4,6 +4,7 @@
 
 #define READ_BUF_AUX_SIZE 128
 #define INITIAL_AMOUNT 3
+#define FILES_PER_CHILD 5
 
 int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
     if(cant_files == 0 || index == argc) {
@@ -19,13 +20,6 @@ int main(int argc, char* argv[]){
         errExit("Give at least one file to convert\n");
 
     setvbuf(stdout,NULL,_IONBF,0);
-
-    int to_read = argc-1;
-    int children_amount = (to_read)/5 + 1;
-
-    int initial_amount_read[children_amount];
-    for(int i = 0; i < children_amount ; i++)
-        initial_amount_read[i] = INITIAL_AMOUNT;
 
     int shm_fd;
     struct shmbuf *shmp;
@@ -46,15 +40,23 @@ int main(int argc, char* argv[]){
     if (sem_init(&shmp->left_to_read, 1, 0) == -1)
         errExit("Error initializing semaphore read\n");
 
-    // initializing semaphore in 0
-    if (sem_init(&shmp->app_flag_mutex, 1, 1) == -1)
-        errExit("Error initializing semaphore mutex\n");
-
-    shmp->app_done_writing = 0;
+    int to_read = argc-1;
+    shmp->cant_files_to_print = to_read;
 
     //waiting view
     printf("%s\n", NAME_SHM);
     sleep(2);
+
+    int children_amount = (to_read)/FILES_PER_CHILD + 1;
+
+    // CHILD*init_amount should be lower than "to_read"
+    int init_amount = INITIAL_AMOUNT;
+    if(FILES_PER_CHILD < INITIAL_AMOUNT) //to distribute equally (in case, INITIAL_AMOUNT is bigger than FILES_PER_CHILD -> some children will not receive initial amount)
+        init_amount= FILES_PER_CHILD;
+
+    int initial_amount_read[children_amount];
+    for(int i = 0; i < children_amount ; i++)
+        initial_amount_read[i] = init_amount;
 
     FILE * archivo = fopen("md5file.txt", "w");
 
@@ -83,8 +85,7 @@ int main(int argc, char* argv[]){
         fdRW[i][0] = pipeRAux[0];
 
         //giving child 2 starting files
-        index += sendChildFile(fdRW[i][1], argc, argv, index, INITIAL_AMOUNT);
-
+        index += sendChildFile(fdRW[i][1], argc, argv, index, init_amount);
         FD_SET(fdRW[i][0], &read_fd_set);  // adding fds to rfds select argument
 
         //-------------------------------------------------------------------
@@ -147,7 +148,8 @@ int main(int argc, char* argv[]){
                     errExit("Enlarge aux read buffer\n");
                 if(shmp->index_of_writing + aux > BUF_SIZE)
                     errExit("No space left on buffer\n");
-
+                aux--;
+                aux_buff[aux]=0;
 
                 if(initial_amount_read[i] != 0)
                     initial_amount_read[i]--;
@@ -181,13 +183,6 @@ int main(int argc, char* argv[]){
             }
         }
     }
-
-
-    if(sem_wait(&(shmp->app_flag_mutex)) == -1)
-        errExit("Error while posting sem\n");
-    shmp->app_done_writing = 1;
-    if(sem_post(&(shmp->app_flag_mutex)) == -1)
-        errExit("Error while posting sem\n");
 
     fclose(archivo);
     munmap(shmp, sizeof(*shmp));
