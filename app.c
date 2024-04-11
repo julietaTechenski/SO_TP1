@@ -44,8 +44,9 @@ int main(int argc, char* argv[]){
     shmp->cant_files_to_print = to_read;
 
     //waiting view
-    printf("%s\n", NAME_SHM);
+    printf("%s", NAME_SHM);
     sleep(2);
+    printf("\n");
 
     int children_amount = (to_read)/FILES_PER_CHILD + 1;
 
@@ -139,8 +140,6 @@ int main(int argc, char* argv[]){
         for(int i = 0; i < children_amount && available != 0; i++) {
             if(FD_ISSET(fdRW[i][0], &read_fd_set_aux) != 0) {
 
-                //FILE * stream_child = fdopen(fdRW[i][0], "r");
-                //aux = getline(&aux_buff, &aux_buff_size, stream_child);
                 aux = read(fdRW[i][0], aux_buff, READ_BUF_AUX_SIZE);
                 if(aux == -1)
                     errExit("Error reading from pipe\n");
@@ -148,7 +147,6 @@ int main(int argc, char* argv[]){
                     errExit("Enlarge aux read buffer\n");
                 if(shmp->index_of_writing + aux > BUF_SIZE)
                     errExit("No space left on buffer\n");
-                aux--;
                 aux_buff[aux]=0;
 
                 if(initial_amount_read[i] != 0)

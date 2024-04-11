@@ -6,11 +6,9 @@
 
 int main(int argc, char* argv[]){
 
-    char * shmpath = NULL;
-    size_t size_of_shmpath = 0;
+    char shmpath[MAX_PATH_LENGTH];
     if(argc == 1) {
-        int aux = getline(&shmpath, &size_of_shmpath, stdin);
-        shmpath[aux-1] = 0; //reading \n
+        read(STDIN_FILENO,shmpath, MAX_PATH_LENGTH);
     }else if(argc == 2)
         strcpy(shmpath,argv[1]);
     else

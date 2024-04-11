@@ -31,7 +31,7 @@ void creatingMD5Child(char * file, int file_size, char * md5){
 void generateAnswer(char * file, int size_file, char * md5, int pid){
     int aux_size = size_file + MD5_SIZE + MAX_PID + MAX_FORMAT;
     char answer[aux_size];
-    int length = snprintf(answer, aux_size, "%s - %s - %d\n", file, md5, pid);
+    int length = snprintf(answer, aux_size, "%s - %s - %d", file, md5, pid);
 
     if (length < 0 || length >= aux_size)
         errExit("snprintf generating answer");
