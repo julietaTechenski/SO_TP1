@@ -6,9 +6,14 @@
 #define INITIAL_AMOUNT 3
 #define FILES_PER_CHILD 5
 
-void closeAuxPipes(int pipe1[2], int pipe2[2]){
-    close(pipe1[0]);
-    close(pipe2[1]);
+void redirectPipes(int oldfd, int newfd){
+    dup2(oldfd, newfd);
+    close(oldfd);
+}
+
+void closeAuxPipes(int pipeWAux[2], int pipeRAux[2]){
+    close(pipeWAux[0]);
+    close(pipeRAux[1]);
 }
 int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
     if(cant_files == 0 || index == argc) {
@@ -104,11 +109,8 @@ int main(int argc, char* argv[]){
             char *newargv[] = {CHILD, NULL};  // passing first files as argument
             char *newenviron[] = {NULL};
 
-            dup2(pipeWAux[0], STDIN_FILENO);  //child reading from stdin
-            close(pipeWAux[0]);   //child reading pipe
-
-            dup2(pipeRAux[1], STDOUT_FILENO); //child writing to stdout
-            close(pipeRAux[1]);   //child writing pipe
+            redirectPipes(pipeWAux[0], STDIN_FILENO);  //child reading from stdin
+            redirectPipes(pipeRAux[1], STDOUT_FILENO); //child writing to stdout
 
             for (int j = 0; j <= i; ++j) {       //closing fd with other child and mine
                 close(fdRW[j][0]);
