@@ -33,12 +33,12 @@ void redirectPipes(int old_fd, int new_fd){
 }
 
 void creatingPipes(int pipe_w_aux[2], int pipe_r_aux[2], int fd_rw[2]){
-    if(pipe(pipe_w_aux) == -1){
+    if(pipe(pipe_w_aux) == ERROR){
         errExit("Error generating pipe_app\n");
     }
-    fd_rw[1]= pipe_w_aux[1];
+    fd_rw[1] = pipe_w_aux[1];
 
-    if(pipe(pipe_r_aux) == -1){
+    if(pipe(pipe_r_aux) == ERROR){
         errExit("Error generating pipe_chld\n");
     }
     fd_rw[0] = pipepipe_r_auxRAux[0];
@@ -63,13 +63,13 @@ void closeParallelChildFD(int child, int fd_rw[child][2]){
 void createChild(int pipe_w_aux[2], int pipe_r_aux[2], int index, int children_amount, int fd_rw[children_amount][2], int *nfds){
     pid_t cpid = fork();
 
-    if(cpid == -1){
+    if(cpid == ERROR){
         errExit("Error creating child process\n");
     }
 
     if(cpid == 0){  // child process
-        char *new_argv[] = {CHILD, NULL};  // passing first files as argument
-        char *new_envp[] = {NULL};
+        char * new_argv[] = {CHILD, NULL};  // passing first files as argument
+        char * new_envp[] = {NULL};
 
         redirectPipes(pipe_w_aux[0], STDIN_FILENO);  //child reading from stdin
         redirectPipes(pipe_r_aux[1], STDOUT_FILENO); //child writing to stdout
@@ -93,10 +93,10 @@ int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
     }
     write(fd, argv[index], strlen(argv[index]));
     write(fd, "\n", 1);
-    return 1 + sendChildFile(fd, argc, argv, index+1, cant_files-1);
+    return 1 + sendChildFile(fd, argc, argv, index + 1, cant_files - 1);
 }
 
-void finalClosings(FILE * file, struct shmbuf *shmp, int shm_fd){
+void finalClosings(FILE * file, struct shmbuf * shmp, int shm_fd){
     fclose(file);
     munmap(shmp, sizeof(*shmp));
     close(shm_fd);
@@ -111,14 +111,14 @@ int main(int argc, char* argv[]){
     setvbuf(stdout,NULL,_IONBF,0);
 
     int shm_fd;
-    struct shmbuf *shmp;
+    struct shmbuf * shmp;
 
     //-----------------------shm init--------------------------------------
-    if((shm_fd = shm_open(NAME_SHM, O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1){
+    if((shm_fd = shm_open(NAME_SHM, O_CREAT | O_RDWR | O_TRUNC, 0644)) == ERROR){
         errExit("Error creating shared memory\n");
     }
 
-    if(ftruncate(shm_fd, sizeof(struct shmbuf)) == -1){
+    if(ftruncate(shm_fd, sizeof(struct shmbuf)) == ERROR){
         errExit("Truncate error\n");
     }
 
@@ -158,7 +158,7 @@ int main(int argc, char* argv[]){
     int nfds = 0;  //highest numbered file descriptor
     int index = 1; //index of file to be sent to child
 
-    for(int i = 0; i < children_amount; i++){
+    for(int i = 0 ; i < children_amount ; i++){
 
         creatingPipes(pipe_w_aux, pipe_r_aux, fd_rw[i]);
 
@@ -168,7 +168,6 @@ int main(int argc, char* argv[]){
 
         createChild(pipe_w_aux, pipe_r_aux, i, children_amount, fd_rw, &nfds);
     }
-
     nfds++; // select argument convention
 
     int retrieved = 0;
@@ -177,18 +176,18 @@ int main(int argc, char* argv[]){
         //Create aux set to execute select
         read_fd_set_aux = read_fd_set;
         int available = select(nfds, &read_fd_set_aux, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
-        if(available == -1){
+        if(available == ERROR){
             errExit("Select error\n");
         }
 
         //Check what's available to read
         size_t aux;
         char aux_buff[READ_BUF_AUX_SIZE];
-        for(int i = 0; i < children_amount && available != 0; i++) {
+        for(int i = 0 ; i < children_amount && available != 0 ; i++) {
             if(FD_ISSET(fd_rw[i][0], &read_fd_set_aux) != 0) {
 
                 aux = read(fd_rw[i][0], aux_buff, READ_BUF_AUX_SIZE);
-                if(aux == -1) {
+                if(aux == ERROR) {
                     errExit("Error reading from pipe\n");
                 }
                 if (aux == READ_BUF_AUX_SIZE) {
@@ -197,7 +196,7 @@ int main(int argc, char* argv[]){
                 if(shmp->index_of_writing + aux > BUF_SIZE) {
                     errExit("No space left on buffer\n");
                 }
-                aux_buff[aux]=0;
+                aux_buff[aux] = 0;
 
                 if(initial_amount_read[i] != 0) {
                     initial_amount_read[i]--;
@@ -215,14 +214,14 @@ int main(int argc, char* argv[]){
                 }
 
                 //---------------WRITE ON SHM--------------------------
-                for (int j = 0; j < aux; ++j) {
+                for (int j = 0 ; j < aux ; j++) {
                     shmp->buf[shmp->index_of_writing + j] = aux_buff[j];
                 }
                 shmp->index_of_writing += aux;
-                shmp->buf[shmp->index_of_writing++]= 0;
+                shmp->buf[shmp->index_of_writing++] = 0;
                 //-----------------------------------------------------
 
-                if(sem_post(&(shmp->left_to_read)) == -1) {
+                if(sem_post(&(shmp->left_to_read)) == ERROR) {
                     errExit("Error while posting sem\n");
                 }
 

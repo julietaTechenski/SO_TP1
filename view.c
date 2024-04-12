@@ -19,7 +19,7 @@ int main(int argc, char* argv[]){
 
     int fd;
 
-    if((fd = shm_open(shmpath, O_RDWR, 0644)) == -1) {
+    if((fd = shm_open(shmpath, O_RDWR, 0644)) == ERROR) {
         errExit("Error accessing shared memory\n");
     }
 
@@ -34,7 +34,7 @@ int main(int argc, char* argv[]){
     printf("FILE - MD5_HASH - SLAVE_PID\n");
     while(shmp->cant_files_to_print){
 
-        if(sem_wait(&shmp->left_to_read) == -1) {   // waits to be sth to read
+        if(sem_wait(&shmp->left_to_read) == ERROR) {   // waits to be sth to read
             errExit("Error in semaphores in view\n");
         }
 

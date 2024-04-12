@@ -14,6 +14,7 @@
 #define WRITING "w"
 
 #define BUF_SIZE 4096
+#define ERROR -1
 
 #define errExit(msg) {perror(msg); exit(EXIT_FAILURE);}
 
