@@ -8,6 +8,11 @@
 
 #define CHILD "./child"
 #define NAME_SHM "/app_shm"
+#define FILE_NAME "md5_output.txt"
+
+#define READING "r"
+#define WRITING "w"
+
 
 #define errExit(msg) {perror(msg); exit(EXIT_FAILURE);}
 

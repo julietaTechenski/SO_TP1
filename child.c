@@ -3,7 +3,6 @@
 #define MAX_PID 5
 #define MD5_SIZE 32
 #define MD5SUM "md5sum"
-#define READING "r"
 #define MAX_FORMAT 10 //extra characters for format (spaces, -, :, etc)
 
 void creatingMD5Child(char * file, int file_size, char * md5){

@@ -5,7 +5,6 @@
 #define READ_BUF_AUX_SIZE 128
 #define INITIAL_AMOUNT 3
 #define FILES_PER_CHILD 5
-#define FILE_NAME "md5_output.txt"
 
 void waitForView(){
     printf("%s", NAME_SHM);
@@ -130,7 +129,7 @@ int main(int argc, char* argv[]){
     int init_amount = manageInitialAmountOfFiles(children_amount, initial_amount_read);
 
 
-    FILE * file = fopen(FILE_NAME, "w");
+    FILE * file = fopen(FILE_NAME, WRITING);
 
     // pipes' variables
     int pipeWAux[2];
