@@ -41,7 +41,7 @@ void creatingPipes(int pipe_w_aux[2], int pipe_r_aux[2], int fd_rw[2]){
     if(pipe(pipe_r_aux) == ERROR){
         errExit("Error in pipe function while generating pipe_chld\n");
     }
-    fd_rw[0] = pipepipe_r_auxRAux[0];
+    fd_rw[0] = pipe_r_aux[0];
 }
 
 void closeAuxPipes(int pipe_w_aux[2], int pipe_r_aux[2]){
