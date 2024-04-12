@@ -17,6 +17,16 @@ void redirectPipes(int oldfd, int newfd){
     close(oldfd);
 }
 
+void creatingPipes(int pipeWAux[2], int pipeRAux[2], int fdRW[2]){
+    if(pipe(pipeWAux) == -1)
+    errExit("Error generating pipe_app\n");
+    fdRW[1]= pipeWAux[1];
+
+    if(pipe(pipeRAux) == -1)
+    errExit("Error generating pipe_chld\n");
+    fdRW[0] = pipeRAux[0];
+}
+
 void closeAuxPipes(int pipeWAux[2], int pipeRAux[2]){
     close(pipeWAux[0]);
     close(pipeRAux[1]);
@@ -88,14 +98,8 @@ int main(int argc, char* argv[]){
     int index = 1; //index of file to be sent to child
 
     for(int i = 0; i < children_amount; i++){
-        //creating pipe between app and child
-        if(pipe(pipeWAux) == -1)
-            errExit("Error generating pipe_app\n");
-        fdRW[i][1]= pipeWAux[1];
 
-        if(pipe(pipeRAux) == -1)
-            errExit("Error generating pipe_chld\n");
-        fdRW[i][0] = pipeRAux[0];
+        creatingPipes(pipeWAux, pipeRAux, fdRW[i]);
 
         //giving child 2 starting files
         index += sendChildFile(fdRW[i][1], argc, argv, index, init_amount);
