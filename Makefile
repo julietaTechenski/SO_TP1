@@ -15,6 +15,6 @@ view: ./view.c
 	$(COMPILER) $^ $(FLAGS) -o $@
 
 clean:
-	rm -f app child view
+	rm -f app child view md5_output.txt
 
 .PHONY: all clean app child view
