@@ -5,6 +5,7 @@
 #define READ_BUF_AUX_SIZE 128
 #define INITIAL_AMOUNT 3
 #define FILES_PER_CHILD 5
+#define FILE_NAME "md5_output.txt"
 
 void waitForView(){
     printf("%s", NAME_SHM);
@@ -87,8 +88,8 @@ int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
     return 1 + sendChildFile(fd, argc, argv, index+1, cant_files-1);
 }
 
-void finalClosings(FILE * archivo, struct shmbuf *shmp, int shm_fd){
-    fclose(archivo);
+void finalClosings(FILE * file, struct shmbuf *shmp, int shm_fd){
+    fclose(file);
     munmap(shmp, sizeof(*shmp));
     close(shm_fd);
     shm_unlink(NAME_SHM);
@@ -125,12 +126,11 @@ int main(int argc, char* argv[]){
     waitForView();
 
     int children_amount = (to_read)/FILES_PER_CHILD + 1;
-
     int initial_amount_read[children_amount];
     int init_amount = manageInitialAmountOfFiles(children_amount, initial_amount_read);
 
 
-    FILE * archivo = fopen("md5file.txt", "w");
+    FILE * file = fopen(FILE_NAME, "w");
 
     // pipes' variables
     int pipeWAux[2];
@@ -206,7 +206,7 @@ int main(int argc, char* argv[]){
                 if(sem_post(&(shmp->left_to_read)) == -1)
                     errExit("Error while posting sem\n");
 
-                fprintf(archivo, "%s\n", aux_buff);
+                fprintf(file, "%s\n", aux_buff);
 
                 retrieved++;
                 available--;
@@ -214,7 +214,7 @@ int main(int argc, char* argv[]){
         }
     }
 
-    finalClosings(archivo, shmp, shm_fd);
+    finalClosings(file, shmp, shm_fd);
     return 0;
 }
 
