@@ -34,12 +34,12 @@ void redirectPipes(int old_fd, int new_fd){
 
 void creatingPipes(int pipe_w_aux[2], int pipe_r_aux[2], int fd_rw[2]){
     if(pipe(pipe_w_aux) == ERROR){
-        errExit("Error generating pipe_app\n");
+        errExit("Error in pipe function while generating pipe_app\n");
     }
     fd_rw[1] = pipe_w_aux[1];
 
     if(pipe(pipe_r_aux) == ERROR){
-        errExit("Error generating pipe_chld\n");
+        errExit("Error in pipe function while generating pipe_chld\n");
     }
     fd_rw[0] = pipepipe_r_auxRAux[0];
 }
@@ -64,7 +64,7 @@ void createChild(int pipe_w_aux[2], int pipe_r_aux[2], int index, int children_a
     pid_t cpid = fork();
 
     if(cpid == ERROR){
-        errExit("Error creating child process\n");
+        errExit("Error in fork function\n");
     }
 
     if(cpid == 0){  // child process
@@ -78,7 +78,7 @@ void createChild(int pipe_w_aux[2], int pipe_r_aux[2], int index, int children_a
 
         execve(new_argv[0], new_argv, new_envp);
         //execve returns on error
-        errExit("Execve error\n");
+        errExit("Error in execve\n");
     }
     closeAuxPipes(pipe_w_aux, pipe_r_aux);
 
@@ -105,7 +105,7 @@ void finalClosings(FILE * file, struct shmbuf * shmp, int shm_fd){
 
 int main(int argc, char* argv[]){
     if(argc == 1){
-        errExit("Give at least one file to convert\n");
+        errExit("Error incorrect amount of parameters. Give at least one file to convert\n");
     }
 
     setvbuf(stdout,NULL,_IONBF,0);
@@ -115,22 +115,22 @@ int main(int argc, char* argv[]){
 
     //-----------------------shm init--------------------------------------
     if((shm_fd = shm_open(NAME_SHM, O_CREAT | O_RDWR | O_TRUNC, 0644)) == ERROR){
-        errExit("Error creating shared memory\n");
+        errExit("Error in shm_open function while creating shared memory\n");
     }
 
     if(ftruncate(shm_fd, sizeof(struct shmbuf)) == ERROR){
-        errExit("Truncate error\n");
+        errExit("Error in ftruncate function\n");
     }
 
     shmp = mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE,MAP_SHARED, shm_fd, 0);
     if (shmp == MAP_FAILED){
-        errExit("Mmap error\n");
+        errExit("Error in mmap function\n");
     }
     //--------------------------------------------------------------------
 
     // initializing semaphore in 0
     if (sem_init(&shmp->left_to_read, 1, 0) == -1){
-        errExit("Error initializing semaphore read\n");
+        errExit("Error in sem_init function while initializing semaphore read\n");
     }
 
     int to_read = argc-1;
@@ -177,7 +177,7 @@ int main(int argc, char* argv[]){
         read_fd_set_aux = read_fd_set;
         int available = select(nfds, &read_fd_set_aux, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
         if(available == ERROR){
-            errExit("Select error\n");
+            errExit("Error in select function\n");
         }
 
         //Check what's available to read
@@ -188,13 +188,13 @@ int main(int argc, char* argv[]){
 
                 aux = read(fd_rw[i][0], aux_buff, READ_BUF_AUX_SIZE);
                 if(aux == ERROR) {
-                    errExit("Error reading from pipe\n");
+                    errExit("Error in read function while reading from pipe\n");
                 }
                 if (aux == READ_BUF_AUX_SIZE) {
-                    errExit("Enlarge aux read buffer\n");
+                    errExit("Error in reading buffer. Enlarge aux buffer\n");
                 }
                 if(shmp->index_of_writing + aux > BUF_SIZE) {
-                    errExit("No space left on buffer\n");
+                    errExit("Error no space left on buffer\n");
                 }
                 aux_buff[aux] = 0;
 
@@ -222,7 +222,7 @@ int main(int argc, char* argv[]){
                 //-----------------------------------------------------
 
                 if(sem_post(&(shmp->left_to_read)) == ERROR) {
-                    errExit("Error while posting sem\n");
+                    errExit("Error in sem_post function\n");
                 }
 
                 fprintf(file, "%s\n", aux_buff);

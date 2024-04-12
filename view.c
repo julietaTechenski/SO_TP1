@@ -12,7 +12,7 @@ int main(int argc, char* argv[]){
     } else if(argc == 2) {
         strcpy(shmpath, argv[1]);
     } else {
-        errExit("Incorrect amount of parameters for view, try running with with a pipe or a shm path as parameter\n");
+        errExit("Error incorrect amount of parameters for view.\n Try running with with a pipe or a shm path as parameter\n");
     }
 
     // opening shm object
@@ -20,13 +20,13 @@ int main(int argc, char* argv[]){
     int fd;
 
     if((fd = shm_open(shmpath, O_RDWR, 0644)) == ERROR) {
-        errExit("Error accessing shared memory\n");
+        errExit("Error in shm_open function while accessing shared memory\n");
     }
 
     //mapping shm into the caller's address space
     struct shmbuf * shmp = mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if(shmp == MAP_FAILED) {
-        errExit("shm couldn't be mapped\n");
+        errExit("Error in mmap function. shm could not be mapped from view\n");
     }
 
     shmp->index_of_reading = 0; // initializing index to zero
@@ -35,7 +35,7 @@ int main(int argc, char* argv[]){
     while(shmp->cant_files_to_print){
 
         if(sem_wait(&shmp->left_to_read) == ERROR) {   // waits to be sth to read
-            errExit("Error in semaphores in view\n");
+            errExit("Error in sem_wait function\n");
         }
 
         int aux = printf("%s", &shmp->buf[shmp->index_of_reading]);
