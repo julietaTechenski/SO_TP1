@@ -11,17 +11,20 @@ void creatingMD5Child(char * file, int file_size, char * md5){
     char command[aux_size];
     int length = snprintf(command, aux_size,"%s %s", MD5SUM, file);
 
-    if (length < 0 || length >= aux_size)
+    if (length < 0 || length >= aux_size) {
         errExit("snprintf creating md5_child");
+    }
 
     //Creating pipes for child_md5 process
     FILE * child_pipe = popen(command, READING);
-    if (child_pipe == NULL)
+    if (child_pipe == NULL) {
         errExit("Error popen() failed");
+    }
 
     //Reading output
-    if (read(fileno(child_pipe), md5, MD5_SIZE) != MD5_SIZE)
+    if (read(fileno(child_pipe), md5, MD5_SIZE) != MD5_SIZE) {
         errExit("Error read() failed");
+    }
     md5[MD5_SIZE] = '\0';
 
     pclose(child_pipe);
@@ -32,11 +35,13 @@ void generateAnswer(char * file, int size_file, char * md5, int pid){
     char answer[aux_size];
     int length = snprintf(answer, aux_size, "%s - %s - %d", file, md5, pid);
 
-    if (length < 0 || length >= aux_size)
+    if (length < 0 || length >= aux_size) {
         errExit("snprintf generating answer");
+    }
 
-    if (write(STDOUT_FILENO, answer, length) != length)
+    if (write(STDOUT_FILENO, answer, length) != length) {
         errExit("Error writing to parent pipe from child");
+    }
 }
 
 int main(int argc, char* argv[]) {

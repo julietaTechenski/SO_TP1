@@ -14,11 +14,16 @@ void waitForView(){
 
 int manageInitialAmountOfFiles(int children_amount, int initial_amount_read[children_amount]){
     int init_amount = INITIAL_AMOUNT;
-    //if(FILES_PER_CHILD < INITIAL_AMOUNT) //to distribute equally (in case, INITIAL_AMOUNT is bigger than FILES_PER_CHILD -> some children will not receive initial amount)
-    //    init_amount= FILES_PER_CHILD;
 
-    for(int i = 0; i < children_amount ; i++)
+    //In case of modification of INITIAL_AMOUNT, to distribute equally
+    //In case, INITIAL_AMOUNT is bigger than FILES_PER_CHILD -> some children will not receive initial amount
+    if(FILES_PER_CHILD < INITIAL_AMOUNT){
+        init_amount= FILES_PER_CHILD;
+    }
+
+    for(int i = 0; i < children_amount ; i++){
         initial_amount_read[i] = init_amount;
+    }
     return init_amount;
 }
 
@@ -28,12 +33,14 @@ void redirectPipes(int oldfd, int newfd){
 }
 
 void creatingPipes(int pipeWAux[2], int pipeRAux[2], int fdRW[2]){
-    if(pipe(pipeWAux) == -1)
-    errExit("Error generating pipe_app\n");
+    if(pipe(pipeWAux) == -1){
+        errExit("Error generating pipe_app\n");
+    }
     fdRW[1]= pipeWAux[1];
 
-    if(pipe(pipeRAux) == -1)
-    errExit("Error generating pipe_chld\n");
+    if(pipe(pipeRAux) == -1){
+        errExit("Error generating pipe_chld\n");
+    }
     fdRW[0] = pipeRAux[0];
 }
 
@@ -56,8 +63,9 @@ void closeParallelChildFD(int child, int fdRW[child][2]){
 void createChild(int pipeWAux[2], int pipeRAux[2], int index, int children_amount, int fdRW[children_amount][2], int *nfds){
     pid_t cpid = fork();
 
-    if(cpid == -1)
-    errExit("Error creating child process\n");
+    if(cpid == -1){
+        errExit("Error creating child process\n");
+    }
 
     if(cpid == 0){  // child process
         char *newargv[] = {CHILD, NULL};  // passing first files as argument
@@ -74,8 +82,9 @@ void createChild(int pipeWAux[2], int pipeRAux[2], int index, int children_amoun
     }
     closeAuxPipes(pipeWAux, pipeRAux);
 
-    if(fdRW[index][0] > *nfds)
+    if(fdRW[index][0] > *nfds){
         *nfds = fdRW[index][0];
+    }
 }
 
 int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
@@ -95,8 +104,9 @@ void finalClosings(FILE * file, struct shmbuf *shmp, int shm_fd){
 }
 
 int main(int argc, char* argv[]){
-    if(argc == 1)
+    if(argc == 1){
         errExit("Give at least one file to convert\n");
+    }
 
     setvbuf(stdout,NULL,_IONBF,0);
 
@@ -104,20 +114,24 @@ int main(int argc, char* argv[]){
     struct shmbuf *shmp;
 
     //-----------------------shm init--------------------------------------
-    if((shm_fd = shm_open(NAME_SHM, O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1)
+    if((shm_fd = shm_open(NAME_SHM, O_CREAT | O_RDWR | O_TRUNC, 0644)) == -1){
         errExit("Error creating shared memory\n");
+    }
 
-    if(ftruncate(shm_fd, sizeof(struct shmbuf)) == -1)
+    if(ftruncate(shm_fd, sizeof(struct shmbuf)) == -1){
         errExit("Truncate error\n");
+    }
 
     shmp = mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE,MAP_SHARED, shm_fd, 0);
-    if (shmp == MAP_FAILED)
+    if (shmp == MAP_FAILED){
         errExit("Mmap error\n");
+    }
     //--------------------------------------------------------------------
 
     // initializing semaphore in 0
-    if (sem_init(&shmp->left_to_read, 1, 0) == -1)
+    if (sem_init(&shmp->left_to_read, 1, 0) == -1){
         errExit("Error initializing semaphore read\n");
+    }
 
     int to_read = argc-1;
     shmp->cant_files_to_print = to_read;
@@ -163,8 +177,9 @@ int main(int argc, char* argv[]){
         //Create aux set to execute select
         read_fd_set_aux = read_fd_set;
         int available = select(nfds, &read_fd_set_aux, NULL, NULL, NULL); // ASK (timeout/last argument):  select should 1) specify the timeout duration to wait for event 2) NULL: block indefinitely until one is ready 3) return immediately w/o blocking
-        if(available == -1)
+        if(available == -1){
             errExit("Select error\n");
+        }
 
         //Check what's available to read
         size_t aux;
@@ -173,16 +188,20 @@ int main(int argc, char* argv[]){
             if(FD_ISSET(fdRW[i][0], &read_fd_set_aux) != 0) {
 
                 aux = read(fdRW[i][0], aux_buff, READ_BUF_AUX_SIZE);
-                if(aux == -1)
+                if(aux == -1) {
                     errExit("Error reading from pipe\n");
-                if (aux == READ_BUF_AUX_SIZE)
+                }
+                if (aux == READ_BUF_AUX_SIZE) {
                     errExit("Enlarge aux read buffer\n");
-                if(shmp->index_of_writing + aux > BUF_SIZE)
+                }
+                if(shmp->index_of_writing + aux > BUF_SIZE) {
                     errExit("No space left on buffer\n");
+                }
                 aux_buff[aux]=0;
 
-                if(initial_amount_read[i] != 0)
+                if(initial_amount_read[i] != 0) {
                     initial_amount_read[i]--;
+                }
 
                 // Give an additional file to process
                 // If there's not left files, close the pipes
@@ -196,14 +215,16 @@ int main(int argc, char* argv[]){
                 }
 
                 //---------------WRITE ON SHM--------------------------
-                for (int j = 0; j < aux; ++j)
+                for (int j = 0; j < aux; ++j) {
                     shmp->buf[shmp->index_of_writing + j] = aux_buff[j];
+                }
                 shmp->index_of_writing += aux;
                 shmp->buf[shmp->index_of_writing++]= 0;
                 //-----------------------------------------------------
 
-                if(sem_post(&(shmp->left_to_read)) == -1)
+                if(sem_post(&(shmp->left_to_read)) == -1) {
                     errExit("Error while posting sem\n");
+                }
 
                 fprintf(file, "%s\n", aux_buff);
 
