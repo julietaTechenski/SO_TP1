@@ -27,40 +27,40 @@ int manageInitialAmountOfFiles(int children_amount, int initial_amount_read[chil
     return init_amount;
 }
 
-void redirectPipes(int oldfd, int newfd){
-    dup2(oldfd, newfd);
-    close(oldfd);
+void redirectPipes(int old_fd, int new_fd){
+    dup2(old_fd, new_fd);
+    close(old_fd);
 }
 
-void creatingPipes(int pipeWAux[2], int pipeRAux[2], int fdRW[2]){
-    if(pipe(pipeWAux) == -1){
+void creatingPipes(int pipe_w_aux[2], int pipe_r_aux[2], int fd_rw[2]){
+    if(pipe(pipe_w_aux) == -1){
         errExit("Error generating pipe_app\n");
     }
-    fdRW[1]= pipeWAux[1];
+    fd_rw[1]= pipe_w_aux[1];
 
-    if(pipe(pipeRAux) == -1){
+    if(pipe(pipe_r_aux) == -1){
         errExit("Error generating pipe_chld\n");
     }
-    fdRW[0] = pipeRAux[0];
+    fd_rw[0] = pipepipe_r_auxRAux[0];
 }
 
-void closeAuxPipes(int pipeWAux[2], int pipeRAux[2]){
-    close(pipeWAux[0]);
-    close(pipeRAux[1]);
+void closeAuxPipes(int pipe_w_aux[2], int pipe_r_aux[2]){
+    close(pipe_w_aux[0]);
+    close(pipe_r_aux[1]);
 }
 
-void closePipe(int fdRW[2]){
-    close(fdRW[0]);
-    close(fdRW[1]);
+void closePipe(int fd_rw[2]){
+    close(fd_rw[0]);
+    close(fd_rw[1]);
 }
 
-void closeParallelChildFD(int child, int fdRW[child][2]){
+void closeParallelChildFD(int child, int fd_rw[child][2]){
     for (int i = 0 ; i <= child ; i++) {
-        closePipe(fdRW[i]);
+        closePipe(fd_rw[i]);
     }
 }
 
-void createChild(int pipeWAux[2], int pipeRAux[2], int index, int children_amount, int fdRW[children_amount][2], int *nfds){
+void createChild(int pipe_w_aux[2], int pipe_r_aux[2], int index, int children_amount, int fd_rw[children_amount][2], int *nfds){
     pid_t cpid = fork();
 
     if(cpid == -1){
@@ -68,22 +68,22 @@ void createChild(int pipeWAux[2], int pipeRAux[2], int index, int children_amoun
     }
 
     if(cpid == 0){  // child process
-        char *newargv[] = {CHILD, NULL};  // passing first files as argument
-        char *newenviron[] = {NULL};
+        char *new_argv[] = {CHILD, NULL};  // passing first files as argument
+        char *new_envp[] = {NULL};
 
-        redirectPipes(pipeWAux[0], STDIN_FILENO);  //child reading from stdin
-        redirectPipes(pipeRAux[1], STDOUT_FILENO); //child writing to stdout
+        redirectPipes(pipe_w_aux[0], STDIN_FILENO);  //child reading from stdin
+        redirectPipes(pipe_r_aux[1], STDOUT_FILENO); //child writing to stdout
 
-        closeParallelChildFD(index, fdRW);
+        closeParallelChildFD(index, fd_rw);
 
-        execve(newargv[0], newargv, newenviron);
+        execve(new_argv[0], new_argv, new_envp);
         //execve returns on error
         errExit("Execve error\n");
     }
-    closeAuxPipes(pipeWAux, pipeRAux);
+    closeAuxPipes(pipe_w_aux, pipe_r_aux);
 
-    if(fdRW[index][0] > *nfds){
-        *nfds = fdRW[index][0];
+    if(fd_rw[index][0] > *nfds){
+        *nfds = fd_rw[index][0];
     }
 }
 
@@ -146,9 +146,9 @@ int main(int argc, char* argv[]){
     FILE * file = fopen(FILE_NAME, WRITING);
 
     // pipes' variables
-    int pipeWAux[2];
-    int pipeRAux[2];
-    int fdRW[children_amount][2];
+    int pipe_w_aux[2];
+    int pipe_r_aux[2];
+    int fd_rw[children_amount][2];
 
     // pipes' validation
     fd_set read_fd_set, read_fd_set_aux;
@@ -160,13 +160,13 @@ int main(int argc, char* argv[]){
 
     for(int i = 0; i < children_amount; i++){
 
-        creatingPipes(pipeWAux, pipeRAux, fdRW[i]);
+        creatingPipes(pipe_w_aux, pipe_r_aux, fd_rw[i]);
 
         //giving child 2 starting files
-        index += sendChildFile(fdRW[i][1], argc, argv, index, init_amount);
-        FD_SET(fdRW[i][0], &read_fd_set);  // adding fds to rfds select argument
+        index += sendChildFile(fd_rw[i][1], argc, argv, index, init_amount);
+        FD_SET(fd_rw[i][0], &read_fd_set);  // adding fds to rfds select argument
 
-        createChild(pipeWAux, pipeRAux, i, children_amount, fdRW, &nfds);
+        createChild(pipe_w_aux, pipe_r_aux, i, children_amount, fd_rw, &nfds);
     }
 
     nfds++; // select argument convention
@@ -185,9 +185,9 @@ int main(int argc, char* argv[]){
         size_t aux;
         char aux_buff[READ_BUF_AUX_SIZE];
         for(int i = 0; i < children_amount && available != 0; i++) {
-            if(FD_ISSET(fdRW[i][0], &read_fd_set_aux) != 0) {
+            if(FD_ISSET(fd_rw[i][0], &read_fd_set_aux) != 0) {
 
-                aux = read(fdRW[i][0], aux_buff, READ_BUF_AUX_SIZE);
+                aux = read(fd_rw[i][0], aux_buff, READ_BUF_AUX_SIZE);
                 if(aux == -1) {
                     errExit("Error reading from pipe\n");
                 }
@@ -206,11 +206,11 @@ int main(int argc, char* argv[]){
                 // Give an additional file to process
                 // If there's not left files, close the pipes
                 if(initial_amount_read[i] == 0) {
-                    int cant_sent = sendChildFile(fdRW[i][1], argc, argv, index, 1);
+                    int cant_sent = sendChildFile(fd_rw[i][1], argc, argv, index, 1);
                     index += cant_sent;
                     if (cant_sent == 0) {
-                        closePipe(fdRW[i]);
-                        FD_CLR(fdRW[i][0], &read_fd_set);
+                        closePipe(fd_rw[i]);
+                        FD_CLR(fd_rw[i][0], &read_fd_set);
                     }
                 }
 
