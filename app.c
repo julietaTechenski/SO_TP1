@@ -1,3 +1,5 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include <sys/select.h>
 
 #include "head.h"
@@ -184,7 +186,7 @@ int main(int argc, char* argv[]){
         size_t aux;
         char aux_buff[READ_BUF_AUX_SIZE];
         for(int i = 0 ; i < children_amount && available != 0 ; i++) {
-            if(FD_ISSET(fd_rw[i][0], &read_fd_set_aux) != 0) {
+            if(FD_ISSET(fd_rw[i][0], &read_fd_set_aux)) {
 
                 aux = read(fd_rw[i][0], aux_buff, READ_BUF_AUX_SIZE);
                 if(aux == ERROR) {
@@ -225,15 +227,22 @@ int main(int argc, char* argv[]){
                     errExit("Error in sem_post function\n");
                 }
 
-                fprintf(file, "%s\n", aux_buff);
-
+                if(file != NULL)
+                    fprintf(file, "%s\n", aux_buff);
+                else{
+                    errExit("null pointer passed into fprintf function\n")
+                }
                 retrieved++;
                 available--;
             }
         }
     }
 
-    finalClosings(file, shmp, shm_fd);
+    if(file != NULL) {
+        finalClosings(file, shmp, shm_fd);
+    }else{
+        errExit("null pointer passed into finalClosings function\n");
+    }
     return 0;
 }
 

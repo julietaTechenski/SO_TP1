@@ -1,3 +1,5 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include <signal.h>
 
 #include "head.h"
@@ -10,7 +12,8 @@ int main(int argc, char* argv[]){
     if(argc == 1) {
         read(STDIN_FILENO,shmpath, MAX_PATH_LENGTH);
     } else if(argc == 2) {
-        strcpy(shmpath, argv[1]);
+        strncpy(shmpath, argv[1], sizeof(shmpath) - 1);
+        shmpath[sizeof(shmpath) - 1] = '\0'; // Ensure null-termination
     } else {
         errExit("Error incorrect amount of parameters for view.\n Try running with with a pipe or a shm path as parameter\n");
     }
