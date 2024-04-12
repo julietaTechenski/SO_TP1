@@ -31,6 +31,14 @@ void closeAuxPipes(int pipeWAux[2], int pipeRAux[2]){
     close(pipeWAux[0]);
     close(pipeRAux[1]);
 }
+
+void closeParallelFD(int child, int fdRW[child][2]){
+    for (int i = 0 ; i <= child ; i++) {
+        close(fdRW[i][0]);
+        close(fdRW[i][1]);
+    }
+}
+
 int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
     if(cant_files == 0 || index == argc) {
         return 0;
@@ -119,10 +127,7 @@ int main(int argc, char* argv[]){
             redirectPipes(pipeWAux[0], STDIN_FILENO);  //child reading from stdin
             redirectPipes(pipeRAux[1], STDOUT_FILENO); //child writing to stdout
 
-            for (int j = 0; j <= i; ++j) {       //closing fd with other child and mine
-                close(fdRW[j][0]);
-                close(fdRW[j][1]);
-            }
+            closeParallelFD(i, fdRW);
 
             execve(newargv[0], newargv, newenviron);
             //execve returns on error
