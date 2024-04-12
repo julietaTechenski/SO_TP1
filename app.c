@@ -6,6 +6,12 @@
 #define INITIAL_AMOUNT 3
 #define FILES_PER_CHILD 5
 
+void waitForView(){
+    printf("%s", NAME_SHM);
+    sleep(2);
+    printf("\n");
+}
+
 void redirectPipes(int oldfd, int newfd){
     dup2(oldfd, newfd);
     close(oldfd);
@@ -52,10 +58,7 @@ int main(int argc, char* argv[]){
     int to_read = argc-1;
     shmp->cant_files_to_print = to_read;
 
-    //waiting view
-    printf("%s", NAME_SHM);
-    sleep(2);
-    printf("\n");
+    waitForView();
 
     int children_amount = (to_read)/FILES_PER_CHILD + 1;
 
