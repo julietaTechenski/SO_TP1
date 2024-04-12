@@ -39,6 +39,31 @@ void closeParallelFD(int child, int fdRW[child][2]){
     }
 }
 
+void createChild(int pipeWAux[2], int pipeRAux[2], int index, int children_amount, int fdRW[children_amount][2], int *nfds){
+    pid_t cpid = fork();
+
+    if(cpid == -1)
+    errExit("Error creating child process\n");
+
+    if(cpid == 0){  // child process
+        char *newargv[] = {CHILD, NULL};  // passing first files as argument
+        char *newenviron[] = {NULL};
+
+        redirectPipes(pipeWAux[0], STDIN_FILENO);  //child reading from stdin
+        redirectPipes(pipeRAux[1], STDOUT_FILENO); //child writing to stdout
+
+        closeParallelFD(index, fdRW);
+
+        execve(newargv[0], newargv, newenviron);
+        //execve returns on error
+        errExit("Execve error\n");
+    }
+    closeAuxPipes(pipeWAux, pipeRAux);
+
+    if(fdRW[index][0] > *nfds)
+        *nfds = fdRW[index][0];
+}
+
 int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
     if(cant_files == 0 || index == argc) {
         return 0;
@@ -95,7 +120,6 @@ int main(int argc, char* argv[]){
     int pipeWAux[2];
     int pipeRAux[2];
     int fdRW[children_amount][2];
-    pid_t cpid;
 
     // pipes' validation
     fd_set read_fd_set, read_fd_set_aux;
@@ -113,30 +137,7 @@ int main(int argc, char* argv[]){
         index += sendChildFile(fdRW[i][1], argc, argv, index, init_amount);
         FD_SET(fdRW[i][0], &read_fd_set);  // adding fds to rfds select argument
 
-        //-------------------------------------------------------------------
-
-        cpid = fork();
-
-        if(cpid == -1)
-            errExit("Error creating child process\n");
-
-        if(cpid == 0){  // child process
-            char *newargv[] = {CHILD, NULL};  // passing first files as argument
-            char *newenviron[] = {NULL};
-
-            redirectPipes(pipeWAux[0], STDIN_FILENO);  //child reading from stdin
-            redirectPipes(pipeRAux[1], STDOUT_FILENO); //child writing to stdout
-
-            closeParallelFD(i, fdRW);
-
-            execve(newargv[0], newargv, newenviron);
-            //execve returns on error
-            errExit("Execve error\n");
-        }
-        closeAuxPipes(pipeWAux, pipeRAux);
-
-        if(fdRW[i][0] > nfds)
-            nfds = fdRW[i][0];
+        createChild(pipeWAux, pipeRAux, i, children_amount, fdRW, &nfds);
     }
 
     nfds++; // select argument convention
