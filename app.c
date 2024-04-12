@@ -73,6 +73,13 @@ int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
     return 1 + sendChildFile(fd, argc, argv, index+1, cant_files-1);
 }
 
+void finalClosings(FILE * archivo, struct shmbuf *shmp, int shm_fd){
+    fclose(archivo);
+    munmap(shmp, sizeof(*shmp));
+    close(shm_fd);
+    shm_unlink(NAME_SHM);
+}
+
 int main(int argc, char* argv[]){
     if(argc == 1)
         errExit("Give at least one file to convert\n");
@@ -199,10 +206,7 @@ int main(int argc, char* argv[]){
         }
     }
 
-    fclose(archivo);
-    munmap(shmp, sizeof(*shmp));
-    close(shm_fd);
-    shm_unlink(NAME_SHM);
+    finalClosings(archivo, shmp, shm_fd);
     return 0;
 }
 
