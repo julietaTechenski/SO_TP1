@@ -12,6 +12,16 @@ void waitForView(){
     printf("\n");
 }
 
+int manageInitialAmountOfFiles(int children_amount, int initial_amount_read[children_amount]){
+    int init_amount = INITIAL_AMOUNT;
+    //if(FILES_PER_CHILD < INITIAL_AMOUNT) //to distribute equally (in case, INITIAL_AMOUNT is bigger than FILES_PER_CHILD -> some children will not receive initial amount)
+    //    init_amount= FILES_PER_CHILD;
+
+    for(int i = 0; i < children_amount ; i++)
+        initial_amount_read[i] = init_amount;
+    return init_amount;
+}
+
 void redirectPipes(int oldfd, int newfd){
     dup2(oldfd, newfd);
     close(oldfd);
@@ -116,14 +126,9 @@ int main(int argc, char* argv[]){
 
     int children_amount = (to_read)/FILES_PER_CHILD + 1;
 
-    // CHILD*init_amount should be lower than "to_read"
-    int init_amount = INITIAL_AMOUNT;
-    if(FILES_PER_CHILD < INITIAL_AMOUNT) //to distribute equally (in case, INITIAL_AMOUNT is bigger than FILES_PER_CHILD -> some children will not receive initial amount)
-        init_amount= FILES_PER_CHILD;
-
     int initial_amount_read[children_amount];
-    for(int i = 0; i < children_amount ; i++)
-        initial_amount_read[i] = init_amount;
+    int init_amount = manageInitialAmountOfFiles(children_amount, initial_amount_read);
+
 
     FILE * archivo = fopen("md5file.txt", "w");
 
