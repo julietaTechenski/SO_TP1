@@ -40,25 +40,21 @@ From the project directory run:
 
     ./app FILES_PATH | ./view
     
-Another way to execute the projecto would be to open two terminals inside the docker container and run:
+Another way to execute the project would be to open two terminals inside the docker container and run:
 
 Terminal 1:
 
     ./app FILES_PATH
 
-Terminal 2:
+Terminal 2 (before 2 seconds have passed):
 
     ./view /app_shm
 
-Last option would be to execute app.c in foreground and view.c in backround:
+The last option would be to execute view.c in foreground and app.c in backround:
 
-Terminal 1:
+    ./app FILES_PATH &
 
-    ./app FILES_PATH
-
-Terminal 2:
-
-    ./view /app_shm &
+    ./view /app_shm
 
 ### Output
 
