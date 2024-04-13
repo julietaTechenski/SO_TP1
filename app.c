@@ -7,6 +7,28 @@
 #define READ_BUF_AUX_SIZE 128
 #define FILES_PER_CHILD 5
 
+struct shmbuf * initializeShm(int *shm_fd){
+    struct shmbuf * shmp;
+    if(((*shm_fd) = shm_open(NAME_SHM, O_CREAT | O_RDWR | O_TRUNC, 0644)) == ERROR){
+        errExit("Error in shm_open function while creating shared memory\n");
+    }
+
+    if(ftruncate((*shm_fd), sizeof(struct shmbuf)) == ERROR){
+        errExit("Error in ftruncate function\n");
+    }
+
+    shmp = mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE,MAP_SHARED, (*shm_fd), 0);
+    if (shmp == MAP_FAILED){
+        errExit("Error in mmap function\n");
+    }
+
+    // initializing semaphore in 0
+    if (sem_init(&shmp->left_to_read, 1, 0) == ERROR){
+        errExit("Error in sem_init function while initializing semaphore read\n");
+    }
+    return shmp;
+}
+
 void waitForView(){
     printf("%s", NAME_SHM);
     sleep(2);
@@ -105,6 +127,7 @@ void finalClosings(FILE * file, struct shmbuf * shmp, int shm_fd){
 
 
 
+
 int main(int argc, char* argv[]){
     if(argc == 1){
         errExit("Error incorrect amount of parameters. Give at least one file to convert\n");
@@ -113,26 +136,10 @@ int main(int argc, char* argv[]){
     setvbuf(stdout,NULL,_IONBF,0);
 
     int shm_fd;
-    struct shmbuf * shmp;
+    struct shmbuf * shmp = initializeShm(&shm_fd);
 
-    //-----------------------shm init--------------------------------------
-    if((shm_fd = shm_open(NAME_SHM, O_CREAT | O_RDWR | O_TRUNC, 0644)) == ERROR){
-        errExit("Error in shm_open function while creating shared memory\n");
-    }
-
-    if(ftruncate(shm_fd, sizeof(struct shmbuf)) == ERROR){
-        errExit("Error in ftruncate function\n");
-    }
-
-    shmp = mmap(NULL, sizeof(*shmp), PROT_READ | PROT_WRITE,MAP_SHARED, shm_fd, 0);
     if (shmp == MAP_FAILED){
         errExit("Error in mmap function\n");
-    }
-    //--------------------------------------------------------------------
-
-    // initializing semaphore in 0
-    if (sem_init(&shmp->left_to_read, 1, 0) == -1){
-        errExit("Error in sem_init function while initializing semaphore read\n");
     }
 
     int to_read = argc-1;
@@ -165,7 +172,7 @@ int main(int argc, char* argv[]){
 
         creatingPipes(pipe_w_aux, pipe_r_aux, fd_rw[i]);
 
-        //giving child 2 starting files
+        //giving child starting files
         index += sendChildFile(fd_rw[i][1], argc, argv, index, init_amount);
         FD_SET(fd_rw[i][0], &read_fd_set);  // adding fds to rfds select argument
 
