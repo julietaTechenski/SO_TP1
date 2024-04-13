@@ -15,13 +15,11 @@ int main(int argc, char* argv[]){
 
     setvbuf(stdout,NULL,_IONBF,0);
 
+    //Shared memory variable
     int shm_fd;
     struct shmbuf * shmp = initializeShm(&shm_fd);
 
-    if (shmp == MAP_FAILED){
-        errExit("Error in mmap function\n");
-    }
-
+    //Variables for files to read
     int to_read = argc-1;
     shmp->cant_files_to_print = to_read;
 
@@ -31,16 +29,18 @@ int main(int argc, char* argv[]){
     int initial_amount_read[children_amount];
     int init_amount = manageInitialAmountOfFiles(children_amount, initial_amount_read, to_read);
 
+    //Output file
     FILE * file;
-    if((file = fopen(FILE_NAME, WRITING)) == NULL)
+    if((file = fopen(FILE_NAME, WRITING)) == NULL){
         errExit("Error in fopen while opening md5_output.txt file\n");
+    }
 
-    // pipes' variables
+    //Pipes' variables
     int pipe_w_aux[2];
     int pipe_r_aux[2];
     int fd_rw[children_amount][2];
 
-    // pipes' validation
+    //Initializing select buffers
     fd_set read_fd_set, read_fd_set_aux;
     FD_ZERO(&read_fd_set);
     FD_ZERO(&read_fd_set_aux);
@@ -48,6 +48,7 @@ int main(int argc, char* argv[]){
     int nfds = 0;  //highest numbered file descriptor
     int index = 1; //index of file to be sent to child
 
+    //Creating children
     for(int i = 0 ; i < children_amount ; i++){
 
         creatingPipes(pipe_w_aux, pipe_r_aux, fd_rw[i]);
@@ -137,28 +138,26 @@ struct shmbuf * initializeShm(int *shm_fd){
 }
 
 void waitForView(){
+    //Send shared memory name for view to receive
     printf("%s", NAME_SHM);
     sleep(2);
     printf("\n");
 }
 
 int manageInitialAmountOfFiles(int children_amount, int initial_amount_read[children_amount], int total_files){
+    //Calculating significantly minor amount of initial files to send
     int init_amount = 0.05 * total_files + 1 ;
-    //In case of modification of INITIAL_AMOUNT, to distribute equally
-    //In case, INITIAL_AMOUNT is bigger than FILES_PER_CHILD -> some children will not receive initial amount
+
     if(FILES_PER_CHILD < init_amount){
         init_amount= FILES_PER_CHILD;
     }
 
+    //Setting array of initial amount of files for later organization
     for(int i = 0; i < children_amount ; i++){
         initial_amount_read[i] = init_amount;
     }
-    return init_amount;
-}
 
-void redirectPipes(int old_fd, int new_fd){
-    dup2(old_fd, new_fd);
-    close(old_fd);
+    return init_amount;
 }
 
 void creatingPipes(int pipe_w_aux[2], int pipe_r_aux[2], int fd_rw[2]){
@@ -171,6 +170,11 @@ void creatingPipes(int pipe_w_aux[2], int pipe_r_aux[2], int fd_rw[2]){
         errExit("Error in pipe function while generating pipe_chld\n");
     }
     fd_rw[0] = pipe_r_aux[0];
+}
+
+void redirectPipes(int old_fd, int new_fd){
+    dup2(old_fd, new_fd);
+    close(old_fd);
 }
 
 void closeAuxPipes(int pipe_w_aux[2], int pipe_r_aux[2]){
