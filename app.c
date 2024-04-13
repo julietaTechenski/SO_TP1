@@ -33,7 +33,7 @@ int main(int argc, char* argv[]){
 
     FILE * file;
     if((file = fopen(FILE_NAME, WRITING)) == NULL)
-        errExit("Error opening txt file\n");
+        errExit("Error in fopen while opening md5_output.txt file\n");
 
     // pipes' variables
     int pipe_w_aux[2];
@@ -77,15 +77,9 @@ int main(int argc, char* argv[]){
             if(FD_ISSET(fd_rw[i][0], &read_fd_set_aux)) {
 
                 aux = read(fd_rw[i][0], aux_buff, READ_BUF_AUX_SIZE);
-                if(aux == ERROR) {
-                    errExit("Error in read function while reading from pipe\n");
-                }
-                if (aux == READ_BUF_AUX_SIZE) {
-                    errExit("Error in reading buffer. Enlarge aux buffer\n");
-                }
-                if(shmp->index_of_writing + aux > BUF_SIZE) {
-                    errExit("Error no space left on buffer\n");
-                }
+
+                checkReadingErrors(aux, shmp);
+
                 aux_buff[aux] = 0;
 
                 if(initial_amount_read[i] != 0) {
@@ -103,13 +97,7 @@ int main(int argc, char* argv[]){
                     }
                 }
 
-                //---------------WRITE ON SHM--------------------------
-                for (int j = 0 ; j < aux ; j++) {
-                    shmp->buf[shmp->index_of_writing + j] = aux_buff[j];
-                }
-                shmp->index_of_writing += aux;
-                shmp->buf[shmp->index_of_writing++] = 0;
-                //-----------------------------------------------------
+                writeOnShm(aux, shmp,aux_buff);
 
                 if(sem_post(&(shmp->left_to_read)) == ERROR) {
                     errExit("Error in sem_post function\n");
@@ -235,6 +223,27 @@ int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
     write(fd, argv[index], strlen(argv[index]));
     write(fd, "\n", 1);
     return 1 + sendChildFile(fd, argc, argv, index + 1, cant_files - 1);
+}
+
+void checkReadingErrors(size_t aux, struct shmbuf *shmp){
+    if(aux == ERROR) {
+        errExit("Error in read function while reading from pipe\n");
+    }
+    if (aux == READ_BUF_AUX_SIZE) {
+        errExit("Error in reading buffer. Enlarge aux buffer\n");
+    }
+    if(shmp->index_of_writing + aux > BUF_SIZE) {
+        errExit("Error no space left on buffer\n");
+    }
+}
+
+void writeOnShm(size_t aux, struct shmbuf *shmp, char * aux_buff){
+    for (int j = 0 ; j < aux ; j++) {
+        shmp->buf[shmp->index_of_writing + j] = aux_buff[j];
+    }
+    shmp->index_of_writing += aux;
+    shmp->buf[shmp->index_of_writing++] = 0;
+    return;
 }
 
 void finalClosings(FILE * file, struct shmbuf * shmp, int shm_fd){

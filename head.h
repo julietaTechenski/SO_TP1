@@ -36,6 +36,8 @@ void closePipe(int fd_rw[2]);
 void closeParallelChildFD(int child, int fd_rw[child][2]);
 void createChild(int pipe_w_aux[2], int pipe_r_aux[2], int index, int children_amount, int fd_rw[children_amount][2], int *nfds);
 int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files);
+void checkReadingErrors(size_t aux, struct shmbuf *shm);
+void writeOnShm(size_t aux, struct shmbuf *shmp, char * aux_buff);
 void finalClosings(FILE * file, struct shmbuf * shmp, int shm_fd);
 
 
