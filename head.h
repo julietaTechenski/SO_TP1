@@ -25,3 +25,18 @@ struct shmbuf{
     size_t index_of_writing;            /* Number of bytes used in 'buf' */
     char buf[BUF_SIZE];                 /* Data being transferred */
 };
+
+struct shmbuf * initializeShm(int *shm_fd);
+void waitForView();
+int manageInitialAmountOfFiles(int children_amount, int initial_amount_read[children_amount], int total_files);
+void redirectPipes(int old_fd, int new_fd);
+void creatingPipes(int pipe_w_aux[2], int pipe_r_aux[2], int fd_rw[2]);
+void closeAuxPipes(int pipe_w_aux[2], int pipe_r_aux[2]);
+void closePipe(int fd_rw[2]);
+void closeParallelChildFD(int child, int fd_rw[child][2]);
+void createChild(int pipe_w_aux[2], int pipe_r_aux[2], int index, int children_amount, int fd_rw[children_amount][2], int *nfds);
+int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files);
+void finalClosings(FILE * file, struct shmbuf * shmp, int shm_fd);
+
+
+
