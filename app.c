@@ -145,7 +145,9 @@ int main(int argc, char* argv[]){
     int init_amount = manageInitialAmountOfFiles(children_amount, initial_amount_read);
 
 
-    FILE * file = fopen(FILE_NAME, WRITING);
+    FILE * file;
+    if((file = fopen(FILE_NAME, WRITING)) == NULL)
+        errExit("Error opening txt file\n");
 
     // pipes' variables
     int pipe_w_aux[2];
@@ -227,22 +229,14 @@ int main(int argc, char* argv[]){
                     errExit("Error in sem_post function\n");
                 }
 
-                if(file != NULL)
-                    fprintf(file, "%s\n", aux_buff);
-                else{
-                    errExit("null pointer passed into fprintf function\n")
-                }
+                fprintf(file, "%s\n", aux_buff);
                 retrieved++;
                 available--;
             }
         }
     }
 
-    if(file != NULL) {
-        finalClosings(file, shmp, shm_fd);
-    }else{
-        errExit("null pointer passed into finalClosings function\n");
-    }
+    finalClosings(file, shmp, shm_fd);
     return 0;
 }
 
