@@ -5,7 +5,6 @@
 #include "head.h"
 
 #define READ_BUF_AUX_SIZE 128
-#define INITIAL_AMOUNT 3
 #define FILES_PER_CHILD 5
 
 void waitForView(){
@@ -14,12 +13,11 @@ void waitForView(){
     printf("\n");
 }
 
-int manageInitialAmountOfFiles(int children_amount, int initial_amount_read[children_amount]){
-    int init_amount = INITIAL_AMOUNT;
-
+int manageInitialAmountOfFiles(int children_amount, int initial_amount_read[children_amount], int total_files){
+    int init_amount = 0.05 * total_files + 1 ;
     //In case of modification of INITIAL_AMOUNT, to distribute equally
     //In case, INITIAL_AMOUNT is bigger than FILES_PER_CHILD -> some children will not receive initial amount
-    if(FILES_PER_CHILD < INITIAL_AMOUNT){
+    if(FILES_PER_CHILD < init_amount){
         init_amount= FILES_PER_CHILD;
     }
 
@@ -105,6 +103,8 @@ void finalClosings(FILE * file, struct shmbuf * shmp, int shm_fd){
     shm_unlink(NAME_SHM);
 }
 
+
+
 int main(int argc, char* argv[]){
     if(argc == 1){
         errExit("Error incorrect amount of parameters. Give at least one file to convert\n");
@@ -142,8 +142,7 @@ int main(int argc, char* argv[]){
 
     int children_amount = (to_read)/FILES_PER_CHILD + 1;
     int initial_amount_read[children_amount];
-    int init_amount = manageInitialAmountOfFiles(children_amount, initial_amount_read);
-
+    int init_amount = manageInitialAmountOfFiles(children_amount, initial_amount_read, to_read);
 
     FILE * file;
     if((file = fopen(FILE_NAME, WRITING)) == NULL)
