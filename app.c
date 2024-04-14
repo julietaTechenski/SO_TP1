@@ -4,7 +4,6 @@
 
 #include "head.h"
 
-#define READ_BUF_AUX_SIZE 128
 #define FILES_PER_CHILD 5
 
 
@@ -72,14 +71,12 @@ int main(int argc, char* argv[]){
         }
 
         //Check what's available to read
-        size_t aux;
+        ssize_t aux;
         char aux_buff[READ_BUF_AUX_SIZE];
         for(int i = 0 ; i < children_amount && available != 0 ; i++) {
             if(FD_ISSET(fd_rw[i][0], &read_fd_set_aux)) {
 
-                aux = read(fd_rw[i][0], aux_buff, READ_BUF_AUX_SIZE);
-
-                checkReadingErrors(aux, shmp);
+                aux = readFromChild(fd_rw[i][0], aux_buff, shmp);
 
                 aux_buff[aux] = '\0';
 
@@ -234,7 +231,8 @@ void createChild(int pipe_w_aux[2], int pipe_r_aux[2], int index, int children_a
     }
 }
 
-void checkReadingErrors(size_t aux, struct shmbuf *shmp){
+ssize_t readFromChild(int fd, char aux_buff[READ_BUF_AUX_SIZE], struct shmbuf *shmp){
+    ssize_t aux = read(fd, aux_buff, READ_BUF_AUX_SIZE);
     if(aux == ERROR) {
         errExit("Error in read function while reading from pipe\n");
     }
@@ -244,6 +242,7 @@ void checkReadingErrors(size_t aux, struct shmbuf *shmp){
     if(shmp->index_of_writing + aux > BUF_SIZE) {
         errExit("Error no space left on buffer\n");
     }
+    return aux;
 }
 
 void writeOnShm(size_t aux, struct shmbuf *shmp, char * aux_buff){

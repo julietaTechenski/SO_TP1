@@ -14,6 +14,7 @@
 #define WRITING "w"
 
 #define BUF_SIZE 4096
+#define READ_BUF_AUX_SIZE 128
 #define ERROR -1
 
 #define errExit(msg) {perror(msg); exit(EXIT_FAILURE);}
@@ -108,10 +109,12 @@ void createChild(int pipe_w_aux[2], int pipe_r_aux[2], int index, int children_a
 
 /**
  * @def manages if there was an error in function read or no more space in buffer
- * @param aux
- * @param shm
+ * @param fd
+ * @param aux_buff
+ * @param shmp
+ * @return
  */
-void checkReadingErrors(size_t aux, struct shmbuf *shm);
+ssize_t readFromChild(int fd, char aux_buff[READ_BUF_AUX_SIZE], struct shmbuf *shmp);
 
 /**
  * @def writes in shared memory what child returned
