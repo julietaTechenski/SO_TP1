@@ -175,6 +175,17 @@ void creatingPipes(int pipe_w_aux[2], int pipe_r_aux[2], int fd_rw[2]){
     fd_rw[0] = pipe_r_aux[0];
 }
 
+int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
+    //Checking if there are more files to send
+    if(cant_files == 0 || index == argc) {
+        return 0;
+    }
+    //Sending file to child
+    write(fd, argv[index], strlen(argv[index]));
+    write(fd, "\n", 1); //File delimiter
+    return 1 + sendChildFile(fd, argc, argv, index + 1, cant_files - 1);
+}
+
 void redirectPipes(int old_fd, int new_fd){
     dup2(old_fd, new_fd);
     close(old_fd);
@@ -221,17 +232,6 @@ void createChild(int pipe_w_aux[2], int pipe_r_aux[2], int index, int children_a
     if(fd_rw[index][0] > *nfds){
         *nfds = fd_rw[index][0];
     }
-}
-
-int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
-    //Checking if there are more files to send
-    if(cant_files == 0 || index == argc) {
-        return 0;
-    }
-    //Sending file to child
-    write(fd, argv[index], strlen(argv[index]));
-    write(fd, "\n", 1); //File delimiter
-    return 1 + sendChildFile(fd, argc, argv, index + 1, cant_files - 1);
 }
 
 void checkReadingErrors(size_t aux, struct shmbuf *shmp){
