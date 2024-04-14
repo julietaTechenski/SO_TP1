@@ -35,6 +35,7 @@ void creatingMD5Child(char * file, int file_size, char * md5){
 void generateAnswer(char * file, int size_file, char * md5, int pid){
     int aux_size = size_file + MD5_SIZE + MAX_PID + MAX_FORMAT;
     char answer[aux_size];
+    //Formating answer
     int length = snprintf(answer, aux_size, "%s - %s - %d", file, md5, pid);
 
     if (length < 0 || length >= aux_size) {
@@ -48,8 +49,6 @@ void generateAnswer(char * file, int size_file, char * md5, int pid){
 
 int main(int argc, char* argv[]) {
 
-    pid_t pid = getpid();
-
     char * file = NULL;
     size_t size_of_file_buff = 0;
     size_t aux_char_read;
@@ -57,11 +56,11 @@ int main(int argc, char* argv[]) {
     char md5[MD5_SIZE + 1];
 
     //Reading file to use
-    while ((aux_char_read = getline(&file, &size_of_file_buff, stdin)) != -1) {
-        aux_char_read--; //deleting \n
+    while ((aux_char_read = getline(&file, &size_of_file_buff, stdin)) != ERROR) {
+        aux_char_read--; //Deleting \n
         file[aux_char_read] = '\0';
-        creatingMD5Child(file, aux_char_read, md5);
-        generateAnswer(file, aux_char_read, md5, pid);
+        creatingMD5Child(file, (int)aux_char_read, md5);
+        generateAnswer(file, (int)aux_char_read, md5, (int)getpid());
     }
 
     free(file);

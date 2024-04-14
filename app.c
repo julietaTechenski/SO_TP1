@@ -45,21 +45,21 @@ int main(int argc, char* argv[]){
     FD_ZERO(&read_fd_set);
     FD_ZERO(&read_fd_set_aux);
 
-    int nfds = 0;  //highest numbered file descriptor
-    int index = 1; //index of file to be sent to child
+    int nfds = 0;  //Highest numbered file descriptor
+    int index = 1; //Index of file to be sent to child
 
     //Creating children
     for(int i = 0 ; i < children_amount ; i++){
 
         creatingPipes(pipe_w_aux, pipe_r_aux, fd_rw[i]);
 
-        //giving child starting files
+        //Giving child starting files
         index += sendChildFile(fd_rw[i][1], argc, argv, index, init_amount);
-        FD_SET(fd_rw[i][0], &read_fd_set);  // adding fds to rfds select argument
+        FD_SET(fd_rw[i][0], &read_fd_set);  // Adding fds to rfds select argument
 
         createChild(pipe_w_aux, pipe_r_aux, i, children_amount, fd_rw, &nfds);
     }
-    nfds++; // select argument convention
+    nfds++; //Select argument convention
 
     int retrieved = 0;
 
@@ -81,17 +81,18 @@ int main(int argc, char* argv[]){
 
                 checkReadingErrors(aux, shmp);
 
-                aux_buff[aux] = 0;
+                aux_buff[aux] = '\0';
 
                 if(initial_amount_read[i] != 0) {
                     initial_amount_read[i]--;
                 }
 
-                // Give an additional file to process
-                // If there's not left files, close the pipes
+                //If child finished with initial amount sent
                 if(initial_amount_read[i] == 0) {
+                    //Give an additional file to process
                     int cant_sent = sendChildFile(fd_rw[i][1], argc, argv, index, 1);
                     index += cant_sent;
+                    //If there's not left files, close the pipes
                     if (cant_sent == 0) {
                         closePipe(fd_rw[i]);
                         FD_CLR(fd_rw[i][0], &read_fd_set);
@@ -100,11 +101,13 @@ int main(int argc, char* argv[]){
 
                 writeOnShm(aux, shmp,aux_buff);
 
+                //Informs that there is something to read
                 if(sem_post(&(shmp->left_to_read)) == ERROR) {
                     errExit("Error in sem_post function\n");
                 }
-
+                //Writes in output file what child returned
                 fprintf(file, "%s\n", aux_buff);
+
                 retrieved++;
                 available--;
             }
@@ -146,7 +149,7 @@ void waitForView(){
 
 int manageInitialAmountOfFiles(int children_amount, int initial_amount_read[children_amount], int total_files){
     //Calculating significantly minor amount of initial files to send
-    int init_amount = 0.05 * total_files + 1 ;
+    int init_amount = (int)(0.05 * total_files) + 1 ;
 
     if(FILES_PER_CHILD < init_amount){
         init_amount= FILES_PER_CHILD;
@@ -221,11 +224,13 @@ void createChild(int pipe_w_aux[2], int pipe_r_aux[2], int index, int children_a
 }
 
 int sendChildFile(int fd, int argc, char* argv[], int index, int cant_files){
+    //Checking if there are more files to send
     if(cant_files == 0 || index == argc) {
         return 0;
     }
+    //Sending file to child
     write(fd, argv[index], strlen(argv[index]));
-    write(fd, "\n", 1);
+    write(fd, "\n", 1); //File delimiter
     return 1 + sendChildFile(fd, argc, argv, index + 1, cant_files - 1);
 }
 
@@ -242,12 +247,11 @@ void checkReadingErrors(size_t aux, struct shmbuf *shmp){
 }
 
 void writeOnShm(size_t aux, struct shmbuf *shmp, char * aux_buff){
-    for (int j = 0 ; j < aux ; j++) {
-        shmp->buf[shmp->index_of_writing + j] = aux_buff[j];
+    for (int i = 0 ; i < aux ; i++) {
+        shmp->buf[shmp->index_of_writing + i] = aux_buff[i];
     }
     shmp->index_of_writing += aux;
-    shmp->buf[shmp->index_of_writing++] = 0;
-    return;
+    shmp->buf[shmp->index_of_writing++] = '\0';
 }
 
 void finalClosings(FILE * file, struct shmbuf * shmp, int shm_fd){
