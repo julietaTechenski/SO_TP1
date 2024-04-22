@@ -7,10 +7,14 @@
 #define MAX_PATH_LENGTH 128
 
 int main(int argc, char* argv[]){
-    char shmpath[MAX_PATH_LENGTH];
+    char shmpath[MAX_PATH_LENGTH+1];
 
     if(argc == 1) {
-        read(STDIN_FILENO,shmpath, MAX_PATH_LENGTH);
+        ssize_t aux;
+        if((aux = read(STDIN_FILENO,shmpath, MAX_PATH_LENGTH)) == ERROR) {
+            errExit("Error in read while getting shmpath parameter\n");
+        }
+        shmpath[aux] = '\0';  // null terminated
     } else if(argc == 2) {
         strncpy(shmpath, argv[1], sizeof(shmpath) - 1);
         shmpath[sizeof(shmpath) - 1] = '\0';

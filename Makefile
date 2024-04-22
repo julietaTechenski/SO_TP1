@@ -1,5 +1,5 @@
 COMPILER=gcc
-FLAGS=-Wall
+FLAGS=-Wall -g
 
 all: app child view
 
